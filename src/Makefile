@@ -64,3 +64,7 @@
 # config.mk file.
 MAKEFILE_PATH = ../libavr32/asf/avr32/utils/make/Makefile.avr32.in
 include $(MAKEFILE_PATH)
+
+.PHONY: format
+format:
+	find . -type f -name "*.c" -o -name "*.h" | xargs clang-format -style=file -i
