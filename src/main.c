@@ -160,9 +160,6 @@ u8 series_step;
 u16 adc[4];
 u8 SIZE, LENGTH, VARI;
 
-typedef void (*re_t)(void);
-re_t re;
-
 
 // NVRAM data structure located in the flash array.
 __attribute__((__section__(".flash_nvram"))) static nvram_data_t flashy;
@@ -172,7 +169,6 @@ __attribute__((__section__(".flash_nvram"))) static nvram_data_t flashy;
 // prototypes
 
 static void refresh(void);
-static void refresh_mono(void);
 static void refresh_preset(void);
 static void clock(u8 phase);
 
@@ -576,11 +572,6 @@ static void handler_MonomeConnect(s32 data) {
     // print_dbg("\r monome vari: ");
     // print_dbg_ulong(VARI);
 
-    if (VARI)
-        re = &refresh;
-    else
-        re = &refresh_mono;
-
     for (i1 = 0; i1 < 16; i1++)
         if (w.wp[i1].loop_end > LENGTH) w.wp[i1].loop_end = LENGTH;
 
@@ -596,7 +587,7 @@ static void handler_MonomePoll(s32 data) {
 static void handler_MonomeRefresh(s32 data) {
     if (monomeFrameDirty) {
         if (preset_mode == 0)
-            (*re)();  // refresh_mono();
+            refresh();
         else
             refresh_preset();
 
@@ -1655,257 +1646,6 @@ static void refresh() {
 }
 
 
-// application grid redraw without varibright
-static void refresh_mono() {
-    u8 i1, i2;
-
-    // clear top, cut, pattern, prob
-    for (i1 = 0; i1 < 16; i1++) {
-        monomeLedBuffer[i1] = 0;
-        monomeLedBuffer[16 + i1] = 0;
-        monomeLedBuffer[32 + i1] = 0;
-        monomeLedBuffer[48 + i1] = 0;
-    }
-
-    // show mode
-    if (edit_mode == mTrig) {
-        monomeLedBuffer[0] = 11;
-        monomeLedBuffer[1] = 11;
-        monomeLedBuffer[2] = 11;
-        monomeLedBuffer[3] = 11;
-    }
-    else if (edit_mode == mMap) {
-        if (SIZE == 16) {
-            monomeLedBuffer[4 + (edit_cv_ch * 4)] = 11;
-            monomeLedBuffer[5 + (edit_cv_ch * 4)] = 11;
-            monomeLedBuffer[6 + (edit_cv_ch * 4)] = 11;
-            monomeLedBuffer[7 + (edit_cv_ch * 4)] = 11;
-        }
-        else
-            monomeLedBuffer[4 + edit_cv_ch] = 11;
-    }
-    else if (edit_mode == mSeries) {
-        monomeLedBuffer[LENGTH - 1] = 11;
-    }
-
-    if (key_meta) {
-        monomeLedBuffer[0] = 11 * w.tr_mute[0];
-        monomeLedBuffer[1] = 11 * w.tr_mute[1];
-        monomeLedBuffer[2] = 11 * w.tr_mute[2];
-        monomeLedBuffer[3] = 11 * w.tr_mute[3];
-
-        if (SIZE == 16) {
-            monomeLedBuffer[4] = 11 * w.cv_mute[0];
-            monomeLedBuffer[5] = 11 * w.cv_mute[0];
-            monomeLedBuffer[6] = 11 * w.cv_mute[0];
-            monomeLedBuffer[7] = 11 * w.cv_mute[0];
-            monomeLedBuffer[8] = 11 * w.cv_mute[1];
-            monomeLedBuffer[9] = 11 * w.cv_mute[1];
-            monomeLedBuffer[10] = 11 * w.cv_mute[1];
-            monomeLedBuffer[11] = 11 * w.cv_mute[1];
-        }
-        else {
-            monomeLedBuffer[4] = 11 * w.cv_mute[0];
-            monomeLedBuffer[5] = 11 * w.cv_mute[1];
-        }
-    }
-
-    // alt
-    if (key_alt) monomeLedBuffer[LENGTH] = 11;
-
-    // show position
-    monomeLedBuffer[16 + pos] = 15;
-
-    // show pattern
-    monomeLedBuffer[32 + pattern] = 11;
-
-    // show step data
-    if (edit_mode == mTrig) {
-        if (edit_prob == 0) {
-            for (i1 = 0; i1 < SIZE; i1++) {
-                for (i2 = 0; i2 < 4; i2++) {
-                    if (w.wp[pattern].steps[i1] & (1 << i2))
-                        monomeLedBuffer[(i2 + 4) * 16 + i1] = 11;
-                    else
-                        monomeLedBuffer[(i2 + 4) * 16 + i1] = 0;
-                }
-
-                // probs
-                if (w.wp[pattern].step_probs[i1] > 0)
-                    monomeLedBuffer[48 + i1] = 11;
-            }
-        }
-        else if (edit_prob == 1) {
-            for (i1 = 0; i1 < SIZE; i1++) {
-                monomeLedBuffer[64 + i1] = 0;
-                monomeLedBuffer[80 + i1] = 0;
-                monomeLedBuffer[96 + i1] = 0;
-                monomeLedBuffer[112 + i1] = 0;
-
-                if (w.wp[pattern].step_probs[i1] == 255)
-                    monomeLedBuffer[48 + i1] = 11;
-                else if (w.wp[pattern].step_probs[i1] == 0) {
-                    monomeLedBuffer[48 + i1] = 0;
-                    monomeLedBuffer[112 + i1] = 11;
-                }
-                else if (w.wp[pattern].step_probs[i1]) {
-                    monomeLedBuffer[48 + i1] = 11;
-                    monomeLedBuffer[64 +
-                                    16 * (3 -
-                                          (w.wp[pattern].step_probs[i1] >> 6)) +
-                                    i1] = 11;
-                }
-            }
-        }
-    }
-
-    // show map
-    else if (edit_mode == mMap) {
-        if (edit_prob == 0) {
-            // CURVES
-            if (w.wp[pattern].cv_mode[edit_cv_ch] == 0) {
-                for (i1 = 0; i1 < SIZE; i1++) {
-                    // probs
-                    if (w.wp[pattern].cv_probs[edit_cv_ch][i1] > 0)
-                        monomeLedBuffer[48 + i1] = 11;
-
-                    monomeLedBuffer[112 + i1] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i1] > 511) * 11;
-                    monomeLedBuffer[96 + i1] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i1] > 1535) * 11;
-                    monomeLedBuffer[80 + i1] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i1] > 2559) * 11;
-                    monomeLedBuffer[64 + i1] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i1] > 3583) * 11;
-                }
-            }
-            // MAP
-            else {
-                if (!scale_select) {
-                    for (i1 = 0; i1 < SIZE; i1++) {
-                        // probs
-                        if (w.wp[pattern].cv_probs[edit_cv_ch][i1] > 0)
-                            monomeLedBuffer[48 + i1] = 11;
-
-                        // clear edit row
-                        monomeLedBuffer[64 + i1] = 0;
-
-                        // show current edit value, selected
-                        if (edit_cv_value != -1) {
-                            if ((w.wp[pattern].cv_values[edit_cv_value] >> 8) >=
-                                i1)
-                                monomeLedBuffer[80 + i1] = 11;
-                            else
-                                monomeLedBuffer[80 + i1] = 0;
-
-                            if (((w.wp[pattern].cv_values[edit_cv_value] >> 4) &
-                                 0xf) >= i1)
-                                monomeLedBuffer[96 + i1] = 11;
-                            else
-                                monomeLedBuffer[96 + i1] = 0;
-                        }
-                        else {
-                            monomeLedBuffer[80 + i1] = 0;
-                            monomeLedBuffer[96 + i1] = 0;
-                        }
-
-                        // show steps
-                        if (w.wp[pattern].cv_steps[edit_cv_ch][edit_cv_step] &
-                            (1 << i1))
-                            monomeLedBuffer[112 + i1] = 11;
-                        else
-                            monomeLedBuffer[112 + i1] = 0;
-                    }
-
-                    // show edit position
-                    monomeLedBuffer[64 + edit_cv_step] = 11;
-                    // show playing note
-                    monomeLedBuffer[112 + cv_chosen[edit_cv_ch]] = 11;
-                }
-                else {
-                    for (i1 = 0; i1 < SIZE; i1++) {
-                        // probs
-                        if (w.wp[pattern].cv_probs[edit_cv_ch][i1] > 0)
-                            monomeLedBuffer[48 + i1] = 11;
-
-                        monomeLedBuffer[64 + i1] = 0;
-                        monomeLedBuffer[80 + i1] = 0;
-                        monomeLedBuffer[96 + i1] = 0;
-                        monomeLedBuffer[112 + i1] = 0;
-                    }
-
-                    monomeLedBuffer[112] = 11;
-                }
-            }
-        }
-        else if (edit_prob == 1) {
-            for (i1 = 0; i1 < SIZE; i1++) {
-                monomeLedBuffer[64 + i1] = 0;
-                monomeLedBuffer[80 + i1] = 0;
-                monomeLedBuffer[96 + i1] = 0;
-                monomeLedBuffer[112 + i1] = 0;
-
-                if (w.wp[pattern].cv_probs[edit_cv_ch][i1] == 255)
-                    monomeLedBuffer[48 + i1] = 11;
-                else if (w.wp[pattern].cv_probs[edit_cv_ch][i1] == 0) {
-                    monomeLedBuffer[48 + i1] = 0;
-                    monomeLedBuffer[112 + i1] = 11;
-                }
-                else if (w.wp[pattern].cv_probs[edit_cv_ch][i1]) {
-                    monomeLedBuffer[48 + i1] = 11;
-                    monomeLedBuffer[64 +
-                                    16 * (3 - (w.wp[pattern]
-                                                   .cv_probs[edit_cv_ch][i1] >>
-                                               6)) +
-                                    i1] = 11;
-                }
-            }
-        }
-    }
-
-    // series
-    else if (edit_mode == mSeries) {
-        for (i1 = 0; i1 < 6; i1++) {
-            for (i2 = 0; i2 < SIZE; i2++) {
-                // start/end bars, clear
-                if ((key_meta || key_alt) &&
-                    (i1 + scroll_pos == w.series_start ||
-                     i1 + scroll_pos == w.series_end))
-                    monomeLedBuffer[32 + i1 * 16 + i2] = 11;
-                else
-                    monomeLedBuffer[32 + i1 * 16 + i2] = 0;
-            }
-
-            // scroll position helper
-            // monomeLedBuffer[32+i1*16+((scroll_pos+i1)/(64/SIZE))] = 4;
-
-            // sidebar selection indicators
-            if ((key_meta || key_alt) && i1 + scroll_pos > w.series_start &&
-                i1 + scroll_pos < w.series_end) {
-                monomeLedBuffer[32 + i1 * 16] = 11;
-                monomeLedBuffer[32 + i1 * 16 + LENGTH] = 11;
-            }
-
-            for (i2 = 0; i2 < SIZE; i2++) {
-                // show possible states
-                if ((w.series_list[i1 + scroll_pos] >> i2) & 1)
-                    monomeLedBuffer[32 + (i1 * 16) + i2] = 11;
-            }
-        }
-
-        // highlight playhead
-        if (series_pos >= scroll_pos && series_pos < scroll_pos + 6 &&
-            (pos & 1)) {
-            monomeLedBuffer[32 + (series_pos - scroll_pos) * 16 +
-                            series_playing] = 0;
-        }
-    }
-
-    monome_set_quadrant_flag(0);
-    monome_set_quadrant_flag(1);
-}
-
-
 static void refresh_preset() {
     u8 i1, i2;
 
@@ -2254,8 +1994,6 @@ int main(void) {
 
     LENGTH = 15;
     SIZE = 16;
-
-    re = &refresh;
 
     process_ii = &ww_process_ii;
 
