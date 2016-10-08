@@ -37,7 +37,7 @@
 
 
 # project name
-THIS = whitewhale
+THIS = bluewhale
 
 # Path to top level ASF directory relative to this project directory.
 PRJ_PATH = ../libavr32/asf
