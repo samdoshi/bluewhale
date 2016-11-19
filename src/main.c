@@ -96,11 +96,13 @@ typedef enum { mTrig, mMap, mSeries } edit_mode_t;
 
 typedef enum { mForward, mReverse, mDrunk, mRandom } step_mode_t;
 
+typedef enum { mPulse, mGate } tr_mode_t;
+
 typedef struct {
     uint8_t loop_start, loop_end, loop_len, loop_dir;
     uint16_t step_choice;
     uint8_t cv_mode[2];
-    uint8_t tr_mode;
+    tr_mode_t tr_mode;
     step_mode_t step_mode;
     uint8_t steps[16];
     uint8_t step_probs[16];
@@ -359,13 +361,13 @@ void clock(uint8_t phase) {
                 triggered = p->steps[pos];
             }
 
-            if (p->tr_mode == 0) {
+            if (p->tr_mode == mGate) {
                 if (triggered & 0x1 && w.tr_mute[0]) gpio_set_gpio_pin(B00);
                 if (triggered & 0x2 && w.tr_mute[1]) gpio_set_gpio_pin(B01);
                 if (triggered & 0x4 && w.tr_mute[2]) gpio_set_gpio_pin(B02);
                 if (triggered & 0x8 && w.tr_mute[3]) gpio_set_gpio_pin(B03);
             }
-            else {
+            else {  // tr_mode == mPulse
                 if (w.tr_mute[0]) {
                     if (triggered & 0x1)
                         gpio_set_gpio_pin(B00);
@@ -452,7 +454,7 @@ void clock(uint8_t phase) {
     else {
         gpio_clr_gpio_pin(B10);
 
-        if (w.wp[pattern].tr_mode == 0) {
+        if (w.wp[pattern].tr_mode == mGate) {
             gpio_clr_gpio_pin(B00);
             gpio_clr_gpio_pin(B01);
             gpio_clr_gpio_pin(B02);
@@ -850,8 +852,12 @@ static void handler_MonomeGridKey(int32_t data) {
                 monomeFrameDirty++;
             }
             else if (x < 4 && z) {
-                if (key_alt)
-                    w.wp[pattern].tr_mode ^= 1;
+                if (key_alt) {
+                    if (w.wp[pattern].tr_mode == mPulse)
+                        w.wp[pattern].tr_mode = mGate;
+                    else
+                        w.wp[pattern].tr_mode = mPulse;
+                }
                 else if (key_meta)
                     w.tr_mute[x] ^= 1;
                 else
@@ -1286,14 +1292,12 @@ static void refresh() {
         if (w.tr_mute[3]) monomeLedBuffer[3] = 11;
     }
     else if (triggered) {
-        if (triggered & 0x1 && w.tr_mute[0])
-            monomeLedBuffer[0] = 11 - 4 * w.wp[pattern].tr_mode;
-        if (triggered & 0x2 && w.tr_mute[1])
-            monomeLedBuffer[1] = 11 - 4 * w.wp[pattern].tr_mode;
-        if (triggered & 0x4 && w.tr_mute[2])
-            monomeLedBuffer[2] = 11 - 4 * w.wp[pattern].tr_mode;
-        if (triggered & 0x8 && w.tr_mute[3])
-            monomeLedBuffer[3] = 11 - 4 * w.wp[pattern].tr_mode;
+        // dim when in mGate mode
+        uint8_t dim = w.wp[pattern].tr_mode == mGate ? 4 : 0;
+        if (triggered & 0x1 && w.tr_mute[0]) monomeLedBuffer[0] = 11 - dim;
+        if (triggered & 0x2 && w.tr_mute[1]) monomeLedBuffer[1] = 11 - dim;
+        if (triggered & 0x4 && w.tr_mute[2]) monomeLedBuffer[2] = 11 - dim;
+        if (triggered & 0x8 && w.tr_mute[3]) monomeLedBuffer[3] = 11 - dim;
     }
 
     // cv indication
@@ -1852,7 +1856,7 @@ int main(void) {
             w.wp[i1].step_mode = mForward;
             w.wp[i1].cv_mode[0] = 0;
             w.wp[i1].cv_mode[1] = 0;
-            w.wp[i1].tr_mode = 0;
+            w.wp[i1].tr_mode = mPulse;
         }
 
         w.series_start = 0;
