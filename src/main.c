@@ -226,11 +226,6 @@ void clock(u8 phase) {
                 if (series_next > 63) series_next = w.series_start;
             }
 
-            // print_dbg("\r\nSERIES next ");
-            // print_dbg_ulong(series_next);
-            // print_dbg(" pos ");
-            // print_dbg_ulong(series_pos);
-
             count = 0;
             for (i1 = 0; i1 < 16; i1++) {
                 if ((w.series_list[series_pos] >> i1) & 1) {
@@ -446,11 +441,7 @@ void clock(u8 phase) {
 
         // write to DAC
         spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
-        // spi_write(SPI,0x39);	// update both
         spi_write(DAC_SPI, 0x31);  // update A
-                               // spi_write(SPI,0x38);	// update B
-                               // spi_write(SPI,pos*15);	// send position
-        // spi_write(SPI,0);
         spi_write(DAC_SPI, cv0 >> 4);
         spi_write(DAC_SPI, cv0 << 4);
         spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
@@ -488,13 +479,7 @@ static softTimer_t monomeRefreshTimer = {.next = NULL, .prev = NULL };
 
 
 static void clockTimer_callback(void *o) {
-    // static event_t e;
-    // e.type = kEventTimer;
-    // e.data = 0;
-    // event_post(&e);
     if (clock_external == 0) {
-        // print_dbg("\r\ntimer.");
-
         clock_phase++;
         if (clock_phase > 1) clock_phase = 0;
         (*clock_pulse)(clock_phase);
@@ -555,8 +540,6 @@ static void handler_FtdiConnect(s32 data) {
 }
 static void handler_FtdiDisconnect(s32 data) {
     timers_unset_monome();
-    // event_t e = { .type = kEventMonomeDisconnect };
-    // event_post(&e);
 }
 
 static void handler_MonomeConnect(s32 data) {
@@ -575,9 +558,6 @@ static void handler_MonomeConnect(s32 data) {
     for (i1 = 0; i1 < 16; i1++)
         if (w.wp[i1].loop_end > LENGTH) w.wp[i1].loop_end = LENGTH;
 
-
-    // monome_set_quadrant_flag(0);
-    // monome_set_quadrant_flag(1);
     timers_set_monome();
 }
 
@@ -623,8 +603,6 @@ static void handler_PollADC(s32 data) {
     if (i != clock_temp) {
         // 1000ms - 24ms
         clock_time = 25000 / (i + 25);
-        // print_dbg("\r\nnew clock (ms): ");
-        // print_dbg_ulong(clock_time);
 
         timer_set(&clockTimer, clock_time);
     }
@@ -633,10 +611,6 @@ static void handler_PollADC(s32 data) {
     // PARAM POT INPUT
     if (param_accept && edit_prob) {
         *param_dest8 = adc[1] >> 4;  // scale to 0-255;
-                                     // print_dbg("\r\nnew prob: ");
-                                     // print_dbg_ulong(*param_dest8);
-                                     // print_dbg("\t" );
-                                     // print_dbg_ulong(adc[1]);
     }
     else if (param_accept) {
         if (quantize_in)
@@ -651,8 +625,6 @@ static void handler_PollADC(s32 data) {
         if (i != scroll_pos) {
             scroll_pos = i;
             monomeFrameDirty++;
-            // print_dbg("\r scroll pos: ");
-            // print_dbg_ulong(scroll_pos);
         }
     }
 }
@@ -717,9 +689,6 @@ static void handler_KeyTimer(s32 data) {
                         pattern = x;
                         next_pattern = x;
                         monomeFrameDirty++;
-
-                        // print_dbg("\r\n saved pattern: ");
-                        // print_dbg_ulong(x);
                     }
                 }
                 else if (preset_mode == 1) {
@@ -732,9 +701,6 @@ static void handler_KeyTimer(s32 data) {
                         preset_mode = 0;
                     }
                 }
-
-                // print_dbg("\rlong press: ");
-                // print_dbg_ulong(held_keys[i1]);
             }
     }
 }
@@ -758,12 +724,6 @@ static void handler_MonomeGridKey(s32 data) {
     u8 x, y, z, index, i1, found, count;
     s16 delta;
     monome_grid_key_parse_event_data(data, &x, &y, &z);
-    // print_dbg("\r\n monome event; x: ");
-    // print_dbg_hex(x);
-    // print_dbg("; y: 0x");
-    // print_dbg_hex(y);
-    // print_dbg("; z: 0x");
-    // print_dbg_hex(z);
 
     //// TRACK LONG PRESSES
     index = y * 16 + x;
@@ -806,10 +766,6 @@ static void handler_MonomeGridKey(s32 data) {
                     preset_mode = 0;
                 }
             }
-            // print_dbg("\r\nfast press: ");
-            // print_dbg_ulong(index);
-            // print_dbg(": ");
-            // print_dbg_ulong(key_times[index]);
         }
     }
 
@@ -830,8 +786,6 @@ static void handler_MonomeGridKey(s32 data) {
         if (y == 1) {
             keycount_pos += z * 2 - 1;
             if (keycount_pos < 0) keycount_pos = 0;
-            // print_dbg("\r\nkeycount: ");
-            // print_dbg_ulong(keycount_pos);
 
             if (keycount_pos == 1 && z) {
                 if (key_alt == 0) {
@@ -900,9 +854,6 @@ static void handler_MonomeGridKey(s32 data) {
                     w.wp[pattern].loop_len =
                         (LENGTH - w.wp[pattern].loop_start) +
                         w.wp[pattern].loop_end + 1;
-
-                // print_dbg("\r\nloop_len: ");
-                // print_dbg_ulong(w.wp[pattern].loop_len);
             }
         }
 
@@ -1134,8 +1085,6 @@ static void handler_MonomeGridKey(s32 data) {
                         if (index < 24 && y < 8) {
                             for (i1 = 0; i1 < 16; i1++)
                                 w.wp[pattern].cv_values[i1] = SCALES[index][i1];
-                            print_dbg("\rNEW SCALE ");
-                            print_dbg_ulong(index);
                         }
 
                         scale_select = 0;
@@ -1170,8 +1119,6 @@ static void handler_MonomeGridKey(s32 data) {
                             param_accept = z;
                             param_dest =
                                 &(w.wp[pattern].cv_values[edit_cv_value]);
-                            // print_dbg("\r\nparam: ");
-                            // print_dbg_ulong(*param_dest);
                         }
                         else if ((y == 5 || y == 6) && z && x < 4 &&
                                  edit_cv_step != -1) {
@@ -1662,14 +1609,6 @@ static void refresh_preset() {
 }
 
 
-/*
-        {"WW.MUTE1",WW_MUTE1},
-        {"WW.MUTE2",WW_MUTE2},
-        {"WW.MUTE3",WW_MUTE3},
-        {"WW.MUTE4",WW_MUTE4},
-        {"WW.MUTEA",WW_MUTEA},
-        {"WW.MUTEB",WW_MUTEB},
-        */
 static void ww_process_ii(uint8_t *data, uint8_t l) {
     uint8_t i;
     int d;
@@ -1788,10 +1727,6 @@ static void ww_process_ii(uint8_t *data, uint8_t l) {
             break;
         default: break;
     }
-    // print_dbg("\r\nmp: ");
-    // print_dbg_ulong(i);
-    // print_dbg(" ");
-    // print_dbg_ulong(d);
 }
 
 
@@ -1822,9 +1757,6 @@ void check_events(void) {
 // flash commands
 u8 flash_is_fresh(void) {
     return (flashy.fresh != FIRSTRUN_KEY);
-    // flashc_memcpy((void *)&flashy.fresh, &i, sizeof(flashy.fresh),   true);
-    // flashc_memset32((void*)&(flashy.fresh), fresh_MAGIC, 4, true);
-    // flashc_memset((void *)nvram_data, 0x00, 8, sizeof(*nvram_data), true);
 }
 
 // write fresh status
@@ -1833,8 +1765,6 @@ void flash_unfresh(void) {
 }
 
 void flash_write(void) {
-    // print_dbg("\r write preset ");
-    // print_dbg_ulong(preset_select);
     flashc_memcpy((void *)&flashy.w[preset_select], &w, sizeof(w), true);
     flashc_memcpy((void *)&flashy.glyph[preset_select], &glyph, sizeof(glyph),
                   true);
@@ -2004,13 +1934,6 @@ int main(void) {
     timer_add(&keyTimer, 50, &keyTimer_callback, NULL);
     timer_add(&adcTimer, 100, &adcTimer_callback, NULL);
     clock_temp = 10000;  // out of ADC range to force tempo
-
-    // setup daisy chain for two dacs
-    // spi_selectChip(SPI,DAC_SPI);
-    // spi_write(SPI,0x80);
-    // spi_write(SPI,0xff);
-    // spi_write(SPI,0xff);
-    // spi_unselectChip(SPI,DAC_SPI);
 
     while (true) { check_events(); }
 }
