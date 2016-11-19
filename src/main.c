@@ -705,22 +705,22 @@ static void handler_ClockExt(int32_t data) {
 // application grid code
 
 static void handler_MonomeGridKey(int32_t data) {
-    uint8_t x, y, z, index, i1, found, count;
-    int16_t delta;
+    uint8_t x, y, z;
     monome_grid_key_parse_event_data(data, &x, &y, &z);
 
     //// TRACK LONG PRESSES
-    index = y * 16 + x;
     if (z) {
+        uint8_t index = y * 16 + x;
         held_keys[key_count] = index;
         key_count++;
         key_times[index] = 10;  //// THRESHOLD key hold time
     }
     else {
-        found = 0;  // "found"
-        for (i1 = 0; i1 < key_count; i1++) {
-            if (held_keys[i1] == index) found++;
-            if (found) held_keys[i1] = held_keys[i1 + 1];
+        uint8_t index = y * 16 + x;
+        uint8_t found = 0;  // "found"
+        for (uint8_t i = 0; i < key_count; i++) {
+            if (held_keys[i] == index) found++;
+            if (found) held_keys[i] = held_keys[i + 1];
         }
         key_count--;
 
@@ -728,12 +728,12 @@ static void handler_MonomeGridKey(int32_t data) {
         if (key_times[index] > 0) {
             if (edit_mode != mSeries && preset_mode == 0) {
                 if (index / 16 == 2) {
-                    i1 = index % 16;
+                    uint8_t i = index % 16;
                     if (key_alt)
-                        next_pattern = i1;
+                        next_pattern = i;
                     else {
-                        pattern = i1;
-                        next_pattern = i1;
+                        pattern = i;
+                        next_pattern = i;
                     }
                 }
             }
@@ -741,8 +741,8 @@ static void handler_MonomeGridKey(int32_t data) {
             else if (preset_mode == 1) {
                 if (x == 0 && y != preset_select) {
                     preset_select = y;
-                    for (i1 = 0; i1 < 8; i1++)
-                        glyph[i1] = flashy.glyph[preset_select][i1];
+                    for (uint8_t i = 0; i < 8; i++)
+                        glyph[i] = flashy.glyph[preset_select][i];
                 }
                 else if (x == 0 && y == preset_select) {
                     flash_read();
@@ -945,6 +945,7 @@ static void handler_MonomeGridKey(int32_t data) {
                 // CURVES
                 if (p->cv_mode[edit_cv_ch] == 0) {
                     if (y == 4 && z) {
+                        int16_t delta;
                         if (center)
                             delta = 3;
                         else if (key_alt)
@@ -960,16 +961,17 @@ static void handler_MonomeGridKey(int32_t data) {
                                 p->cv_curves[edit_cv_ch][x] = 4092;
                         }
                         else {
-                            for (i1 = 0; i1 < 16; i1++) {
+                            for (uint8_t i = 0; i < 16; i++) {
                                 // saturate
-                                if (p->cv_curves[edit_cv_ch][i1] + delta < 4092)
-                                    p->cv_curves[edit_cv_ch][i1] += delta;
+                                if (p->cv_curves[edit_cv_ch][i] + delta < 4092)
+                                    p->cv_curves[edit_cv_ch][i] += delta;
                                 else
-                                    p->cv_curves[edit_cv_ch][i1] = 4092;
+                                    p->cv_curves[edit_cv_ch][i] = 4092;
                             }
                         }
                     }
                     else if (y == 6 && z) {
+                        int16_t delta;
                         if (center)
                             delta = 3;
                         else if (key_alt)
@@ -985,12 +987,12 @@ static void handler_MonomeGridKey(int32_t data) {
                                 p->cv_curves[edit_cv_ch][x] = 0;
                         }
                         else {
-                            for (i1 = 0; i1 < 16; i1++) {
+                            for (uint8_t i = 0; i < 16; i++) {
                                 // saturate
-                                if (p->cv_curves[edit_cv_ch][i1] > delta)
-                                    p->cv_curves[edit_cv_ch][i1] -= delta;
+                                if (p->cv_curves[edit_cv_ch][i] > delta)
+                                    p->cv_curves[edit_cv_ch][i] -= delta;
                                 else
-                                    p->cv_curves[edit_cv_ch][i1] = 0;
+                                    p->cv_curves[edit_cv_ch][i] = 0;
                             }
                         }
                     }
@@ -1020,8 +1022,8 @@ static void handler_MonomeGridKey(int32_t data) {
                                 p->cv_curves[edit_cv_ch][x] =
                                     rand() % ((adc[1] / 34) * 34 + 1);
                             else {
-                                for (i1 = 0; i1 < 16; i1++) {
-                                    p->cv_curves[edit_cv_ch][i1] =
+                                for (uint8_t i = 0; i < 16; i++) {
+                                    p->cv_curves[edit_cv_ch][i] =
                                         rand() % ((adc[1] / 34) * 34 + 1);
                                 }
                             }
@@ -1044,10 +1046,10 @@ static void handler_MonomeGridKey(int32_t data) {
                 else {
                     if (scale_select && z) {
                         // index -= 64;
-                        index = (y - 4) * 8 + x;
+                        uint8_t index = (y - 4) * 8 + x;
                         if (index < 24 && y < 8) {
-                            for (i1 = 0; i1 < 16; i1++)
-                                p->cv_values[i1] = SCALES[index][i1];
+                            for (uint8_t i = 0; i < 16; i++)
+                                p->cv_values[i] = SCALES[index][i];
                         }
 
                         scale_select = 0;
@@ -1056,13 +1058,13 @@ static void handler_MonomeGridKey(int32_t data) {
                     else {
                         if (z && y == 4) {
                             edit_cv_step = x;
-                            count = 0;
-                            for (i1 = 0; i1 < 16; i1++)
+                            uint8_t count = 0;
+                            for (uint8_t i = 0; i < 16; i++)
                                 if ((p->cv_steps[edit_cv_ch][edit_cv_step] >>
-                                     i1) &
+                                     i) &
                                     1) {
                                     count++;
-                                    edit_cv_value = i1;
+                                    edit_cv_value = i;
                                 }
                             if (count > 1) edit_cv_value = -1;
 
@@ -1083,7 +1085,7 @@ static void handler_MonomeGridKey(int32_t data) {
                         }
                         else if ((y == 5 || y == 6) && z && x < 4 &&
                                  edit_cv_step != -1) {
-                            delta = 0;
+                            int16_t delta = 0;
                             if (x == 0)
                                 delta = 409;
                             else if (x == 1)
@@ -1096,14 +1098,14 @@ static void handler_MonomeGridKey(int32_t data) {
                             if (y == 6) delta *= -1;
 
                             if (key_alt) {
-                                for (i1 = 0; i1 < 16; i1++) {
-                                    if (p->cv_values[i1] + delta > 4092)
-                                        p->cv_values[i1] = 4092;
+                                for (uint8_t i = 0; i < 16; i++) {
+                                    if (p->cv_values[i] + delta > 4092)
+                                        p->cv_values[i] = 4092;
                                     else if (delta < 0 &&
-                                             p->cv_values[i1] < -1 * delta)
-                                        p->cv_values[i1] = 0;
+                                             p->cv_values[i] < -1 * delta)
+                                        p->cv_values[i] = 0;
                                     else
-                                        p->cv_values[i1] += delta;
+                                        p->cv_values[i] += delta;
                                 }
                             }
                             else {
@@ -1125,11 +1127,11 @@ static void handler_MonomeGridKey(int32_t data) {
                             if (keycount_cv < 0) keycount_cv = 0;
 
                             if (z) {
-                                count = 0;
-                                for (i1 = 0; i1 < 16; i1++)
+                                uint8_t count = 0;
+                                for (uint8_t i = 0; i < 16; i++)
                                     if ((p->cv_steps[edit_cv_ch]
                                                     [edit_cv_step] >>
-                                         i1) &
+                                         i) &
                                         1)
                                         count++;
 
@@ -1149,13 +1151,13 @@ static void handler_MonomeGridKey(int32_t data) {
                                             (1 << x);
 
                                     count = 0;
-                                    for (i1 = 0; i1 < 16; i1++)
+                                    for (uint8_t i = 0; i < 16; i++)
                                         if ((p->cv_steps[edit_cv_ch]
                                                         [edit_cv_step] >>
-                                             i1) &
+                                             i) &
                                             1) {
                                             count++;
-                                            edit_cv_value = i1;
+                                            edit_cv_value = i;
                                         }
 
                                     if (count > 1) edit_cv_value = -1;
@@ -1199,9 +1201,9 @@ static void handler_MonomeGridKey(int32_t data) {
                 if (keycount_series < 0) keycount_series = 0;
 
                 if (z) {
-                    count = 0;
-                    for (i1 = 0; i1 < 16; i1++)
-                        count += (w.series_list[y - 2 + scroll_pos] >> i1) & 1;
+                    uint8_t count = 0;
+                    for (uint8_t i = 0; i < 16; i++)
+                        count += (w.series_list[y - 2 + scroll_pos] >> i) & 1;
 
                     // single press toggle
                     if (keycount_series == 1 && count < 2) {
@@ -1226,6 +1228,8 @@ static void handler_MonomeGridKey(int32_t data) {
 ////////////////////////////////////////////////////////////////////////////////
 // application grid redraw
 static void refresh() {
+    whale_pattern_t *p = &w.wp[pattern];
+
     // clear top, cut, pattern, prob
     for (uint8_t i = 0; i < 16; i++) {
         monomeLedBuffer[i] = 0;
@@ -1264,7 +1268,7 @@ static void refresh() {
     }
     else if (triggered) {
         // dim when in mGate mode
-        uint8_t dim = w.wp[pattern].tr_mode == mGate ? 4 : 0;
+        uint8_t dim = p->tr_mode == mGate ? 4 : 0;
         if (triggered & 0x1 && w.tr_mute[0]) monomeLedBuffer[0] = 11 - dim;
         if (triggered & 0x2 && w.tr_mute[1]) monomeLedBuffer[1] = 11 - dim;
         if (triggered & 0x4 && w.tr_mute[2]) monomeLedBuffer[2] = 11 - dim;
@@ -1292,14 +1296,12 @@ static void refresh() {
     }
 
     // show pos loop dim
-    if (w.wp[pattern].loop_dir) {
+    if (p->loop_dir) {
         for (uint8_t i = 0; i < kGridWidth; i++) {
-            if (w.wp[pattern].loop_dir == 1 && i >= w.wp[pattern].loop_start &&
-                i <= w.wp[pattern].loop_end)
+            if (p->loop_dir == 1 && i >= p->loop_start && i <= p->loop_end)
                 monomeLedBuffer[16 + i] = 4;
-            else if (w.wp[pattern].loop_dir == 2 &&
-                     (i <= w.wp[pattern].loop_end ||
-                      i >= w.wp[pattern].loop_start))
+            else if (p->loop_dir == 2 &&
+                     (i <= p->loop_end || i >= p->loop_start))
                 monomeLedBuffer[16 + i] = 4;
         }
     }
@@ -1317,13 +1319,13 @@ static void refresh() {
         if (edit_prob == 0) {
             for (uint8_t i = 0; i < kGridWidth; i++) {
                 for (uint8_t j = 0; j < 4; j++) {
-                    if ((w.wp[pattern].steps[i] & (1 << j)) && i == pos &&
+                    if ((p->steps[i] & (1 << j)) && i == pos &&
                         (triggered & 1 << j) && w.tr_mute[j])
                         monomeLedBuffer[(j + 4) * 16 + i] = 11;
-                    else if (w.wp[pattern].steps[i] & (1 << j) &&
-                             (w.wp[pattern].step_choice & 1 << i))
+                    else if (p->steps[i] & (1 << j) &&
+                             (p->step_choice & 1 << i))
                         monomeLedBuffer[(j + 4) * 16 + i] = 4;
-                    else if (w.wp[pattern].steps[i] & (1 << j))
+                    else if (p->steps[i] & (1 << j))
                         monomeLedBuffer[(j + 4) * 16 + i] = 7;
                     else if (i == pos)
                         monomeLedBuffer[(j + 4) * 16 + i] = 4;
@@ -1332,9 +1334,9 @@ static void refresh() {
                 }
 
                 // probs
-                if (w.wp[pattern].step_probs[i] == 255)
+                if (p->step_probs[i] == 255)
                     monomeLedBuffer[48 + i] = 11;
-                else if (w.wp[pattern].step_probs[i] > 0)
+                else if (p->step_probs[i] > 0)
                     monomeLedBuffer[48 + i] = 4;
             }
         }
@@ -1345,17 +1347,15 @@ static void refresh() {
                 monomeLedBuffer[96 + i] = 4;
                 monomeLedBuffer[112 + i] = 4;
 
-                if (w.wp[pattern].step_probs[i] == 255)
+                if (p->step_probs[i] == 255)
                     monomeLedBuffer[48 + i] = 11;
-                else if (w.wp[pattern].step_probs[i] == 0) {
+                else if (p->step_probs[i] == 0) {
                     monomeLedBuffer[48 + i] = 0;
                     monomeLedBuffer[112 + i] = 7;
                 }
-                else if (w.wp[pattern].step_probs[i]) {
+                else if (p->step_probs[i]) {
                     monomeLedBuffer[48 + i] = 4;
-                    monomeLedBuffer[64 +
-                                    16 * (3 -
-                                          (w.wp[pattern].step_probs[i] >> 6)) +
+                    monomeLedBuffer[64 + 16 * (3 - (p->step_probs[i] >> 6)) +
                                     i] = 7;
                 }
             }
@@ -1366,27 +1366,24 @@ static void refresh() {
     else if (edit_mode == mMap) {
         if (edit_prob == 0) {
             // CURVES
-            if (w.wp[pattern].cv_mode[edit_cv_ch] == 0) {
+            if (p->cv_mode[edit_cv_ch] == 0) {
                 for (uint8_t i = 0; i < kGridWidth; i++) {
                     // probs
-                    if (w.wp[pattern].cv_probs[edit_cv_ch][i] == 255)
+                    if (p->cv_probs[edit_cv_ch][i] == 255)
                         monomeLedBuffer[48 + i] = 11;
-                    else if (w.wp[pattern].cv_probs[edit_cv_ch][i] > 0)
+                    else if (p->cv_probs[edit_cv_ch][i] > 0)
                         monomeLedBuffer[48 + i] = 7;
 
                     monomeLedBuffer[112 + i] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i] > 1023) * 7;
+                        (p->cv_curves[edit_cv_ch][i] > 1023) * 7;
                     monomeLedBuffer[96 + i] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i] > 2047) * 7;
+                        (p->cv_curves[edit_cv_ch][i] > 2047) * 7;
                     monomeLedBuffer[80 + i] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i] > 3071) * 7;
+                        (p->cv_curves[edit_cv_ch][i] > 3071) * 7;
                     monomeLedBuffer[64 + i] = 0;
-                    monomeLedBuffer[64 +
-                                    16 * (3 - (w.wp[pattern]
-                                                   .cv_curves[edit_cv_ch][i] >>
-                                               10)) +
-                                    i] =
-                        (w.wp[pattern].cv_curves[edit_cv_ch][i] >> 7) & 0x7;
+                    monomeLedBuffer
+                        [64 + 16 * (3 - (p->cv_curves[edit_cv_ch][i] >> 10)) +
+                         i] = (p->cv_curves[edit_cv_ch][i] >> 7) & 0x7;
                 }
 
                 // play step highlight
@@ -1400,9 +1397,9 @@ static void refresh() {
                 if (!scale_select) {
                     for (uint8_t i = 0; i < kGridWidth; i++) {
                         // probs
-                        if (w.wp[pattern].cv_probs[edit_cv_ch][i] == 255)
+                        if (p->cv_probs[edit_cv_ch][i] == 255)
                             monomeLedBuffer[48 + i] = 11;
-                        else if (w.wp[pattern].cv_probs[edit_cv_ch][i] > 0)
+                        else if (p->cv_probs[edit_cv_ch][i] > 0)
                             monomeLedBuffer[48 + i] = 7;
 
                         // clear edit select line
@@ -1410,14 +1407,12 @@ static void refresh() {
 
                         // show current edit value, selected
                         if (edit_cv_value != -1) {
-                            if ((w.wp[pattern].cv_values[edit_cv_value] >> 8) >=
-                                i)
+                            if ((p->cv_values[edit_cv_value] >> 8) >= i)
                                 monomeLedBuffer[80 + i] = 7;
                             else
                                 monomeLedBuffer[80 + i] = 0;
 
-                            if (((w.wp[pattern].cv_values[edit_cv_value] >> 4) &
-                                 0xf) >= i)
+                            if (((p->cv_values[edit_cv_value] >> 4) & 0xf) >= i)
                                 monomeLedBuffer[96 + i] = 4;
                             else
                                 monomeLedBuffer[96 + i] = 0;
@@ -1428,8 +1423,7 @@ static void refresh() {
                         }
 
                         // show steps
-                        if (w.wp[pattern].cv_steps[edit_cv_ch][edit_cv_step] &
-                            (1 << i))
+                        if (p->cv_steps[edit_cv_ch][edit_cv_step] & (1 << i))
                             monomeLedBuffer[112 + i] = 7;
                         else
                             monomeLedBuffer[112 + i] = 0;
@@ -1445,9 +1439,9 @@ static void refresh() {
                 else {
                     for (uint8_t i = 0; i < kGridWidth; i++) {
                         // probs
-                        if (w.wp[pattern].cv_probs[edit_cv_ch][i] == 255)
+                        if (p->cv_probs[edit_cv_ch][i] == 255)
                             monomeLedBuffer[48 + i] = 11;
-                        else if (w.wp[pattern].cv_probs[edit_cv_ch][i] > 0)
+                        else if (p->cv_probs[edit_cv_ch][i] > 0)
                             monomeLedBuffer[48 + i] = 7;
 
                         monomeLedBuffer[64 + i] = (i < 8) * 4;
@@ -1467,18 +1461,17 @@ static void refresh() {
                 monomeLedBuffer[96 + i] = 4;
                 monomeLedBuffer[112 + i] = 4;
 
-                if (w.wp[pattern].cv_probs[edit_cv_ch][i] == 255)
+                if (p->cv_probs[edit_cv_ch][i] == 255)
                     monomeLedBuffer[48 + i] = 11;
-                else if (w.wp[pattern].cv_probs[edit_cv_ch][i] == 0) {
+                else if (p->cv_probs[edit_cv_ch][i] == 0) {
                     monomeLedBuffer[48 + i] = 0;
                     monomeLedBuffer[112 + i] = 7;
                 }
-                else if (w.wp[pattern].cv_probs[edit_cv_ch][i]) {
+                else if (p->cv_probs[edit_cv_ch][i]) {
                     monomeLedBuffer[48 + i] = 4;
                     monomeLedBuffer[64 +
-                                    16 * (3 - (w.wp[pattern]
-                                                   .cv_probs[edit_cv_ch][i] >>
-                                               6)) +
+                                    16 * (3 -
+                                          (p->cv_probs[edit_cv_ch][i] >> 6)) +
                                     i] = 7;
                 }
             }
