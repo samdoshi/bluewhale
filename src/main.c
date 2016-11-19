@@ -216,6 +216,7 @@ void clock(uint8_t phase) {
             next_pos = w.wp[pattern].loop_start;
             pattern_jump = 0;
         }
+
         // for series mode and delayed pattern change
         if (series_jump) {
             series_pos = series_next;
@@ -254,33 +255,35 @@ void clock(uint8_t phase) {
 
         pos = next_pos;
 
+        whale_pattern_t *p = &w.wp[pattern];
+
         // live param record
         if (param_accept && live_in) {
-            param_dest = &w.wp[pattern].cv_curves[edit_cv_ch][pos];
-            w.wp[pattern].cv_curves[edit_cv_ch][pos] = adc[1];
+            param_dest = &p->cv_curves[edit_cv_ch][pos];
+            p->cv_curves[edit_cv_ch][pos] = adc[1];
         }
 
         // calc next step
-        if (w.wp[pattern].step_mode == mForward) {  // FORWARD
-            if (pos == w.wp[pattern].loop_end)
-                next_pos = w.wp[pattern].loop_start;
+        if (p->step_mode == mForward) {  // FORWARD
+            if (pos == p->loop_end)
+                next_pos = p->loop_start;
             else if (pos >= kMaxLoopLength)
                 next_pos = 0;
             else
                 next_pos++;
             cut_pos = 0;
         }
-        else if (w.wp[pattern].step_mode == mReverse) {  // REVERSE
-            if (pos == w.wp[pattern].loop_start)
-                next_pos = w.wp[pattern].loop_end;
+        else if (p->step_mode == mReverse) {  // REVERSE
+            if (pos == p->loop_start)
+                next_pos = p->loop_end;
             else if (pos <= 0)
                 next_pos = kMaxLoopLength;
             else
                 next_pos--;
             cut_pos = 0;
         }
-        else if (w.wp[pattern].step_mode == mDrunk) {  // DRUNK
-            drunk_step += (rnd() % 3) - 1;             // -1 to 1
+        else if (p->step_mode == mDrunk) {  // DRUNK
+            drunk_step += (rnd() % 3) - 1;  // -1 to 1
             if (drunk_step < -1)
                 drunk_step = -1;
             else if (drunk_step > 1)
@@ -291,26 +294,22 @@ void clock(uint8_t phase) {
                 next_pos = kMaxLoopLength;
             else if (next_pos > kMaxLoopLength)
                 next_pos = 0;
-            else if (w.wp[pattern].loop_dir == 1 &&
-                     next_pos < w.wp[pattern].loop_start)
-                next_pos = w.wp[pattern].loop_end;
-            else if (w.wp[pattern].loop_dir == 1 &&
-                     next_pos > w.wp[pattern].loop_end)
-                next_pos = w.wp[pattern].loop_start;
-            else if (w.wp[pattern].loop_dir == 2 &&
-                     next_pos < w.wp[pattern].loop_start &&
-                     next_pos > w.wp[pattern].loop_end) {
+            else if (p->loop_dir == 1 && next_pos < p->loop_start)
+                next_pos = p->loop_end;
+            else if (p->loop_dir == 1 && next_pos > p->loop_end)
+                next_pos = p->loop_start;
+            else if (p->loop_dir == 2 && next_pos < p->loop_start &&
+                     next_pos > p->loop_end) {
                 if (drunk_step == 1)
-                    next_pos = w.wp[pattern].loop_start;
+                    next_pos = p->loop_start;
                 else
-                    next_pos = w.wp[pattern].loop_end;
+                    next_pos = p->loop_end;
             }
 
             cut_pos = 1;
         }
-        else if (w.wp[pattern].step_mode == mRandom) {  // RANDOM
-            next_pos = (rnd() % (w.wp[pattern].loop_len + 1)) +
-                       w.wp[pattern].loop_start;
+        else if (p->step_mode == mRandom) {  // RANDOM
+            next_pos = (rnd() % (p->loop_len + 1)) + p->loop_start;
             // print_dbg("\r\nnext pos:");
             // print_dbg_ulong(next_pos);
             if (next_pos > kMaxLoopLength) next_pos -= kMaxLoopLength + 1;
@@ -318,21 +317,19 @@ void clock(uint8_t phase) {
         }
 
         // next pattern?
-        if (pos == w.wp[pattern].loop_end &&
-            w.wp[pattern].step_mode == mForward) {
+        if (pos == p->loop_end && p->step_mode == mForward) {
             if (edit_mode == mSeries)
                 series_jump++;
             else if (next_pattern != pattern)
                 pattern_jump++;
         }
-        else if (pos == w.wp[pattern].loop_start &&
-                 w.wp[pattern].step_mode == mReverse) {
+        else if (pos == p->loop_start && p->step_mode == mReverse) {
             if (edit_mode == mSeries)
                 series_jump++;
             else if (next_pattern != pattern)
                 pattern_jump++;
         }
-        else if (series_step == w.wp[pattern].loop_len) {
+        else if (series_step == p->loop_len) {
             series_jump++;
         }
 
@@ -341,12 +338,12 @@ void clock(uint8_t phase) {
 
         // TRIGGER
         triggered = 0;
-        if ((rnd() % 255) < w.wp[pattern].step_probs[pos]) {
-            if (w.wp[pattern].step_choice & 1 << pos) {
+        if ((rnd() % 255) < p->step_probs[pos]) {
+            if (p->step_choice & 1 << pos) {
                 uint count = 0;
                 uint16_t found[16];
                 for (uint8_t i = 0; i < 4; i++)
-                    if (w.wp[pattern].steps[pos] >> i & 1) {
+                    if (p->steps[pos] >> i & 1) {
                         found[count] = i;
                         count++;
                     }
@@ -359,10 +356,10 @@ void clock(uint8_t phase) {
                     triggered = 1 << found[rnd() % count];
             }
             else {
-                triggered = w.wp[pattern].steps[pos];
+                triggered = p->steps[pos];
             }
 
-            if (w.wp[pattern].tr_mode == 0) {
+            if (p->tr_mode == 0) {
                 if (triggered & 0x1 && w.tr_mute[0]) gpio_set_gpio_pin(B00);
                 if (triggered & 0x2 && w.tr_mute[1]) gpio_set_gpio_pin(B01);
                 if (triggered & 0x4 && w.tr_mute[2]) gpio_set_gpio_pin(B02);
@@ -400,15 +397,13 @@ void clock(uint8_t phase) {
 
 
         // PARAM 0
-        if ((rnd() % 255) < w.wp[pattern].cv_probs[0][pos] && w.cv_mute[0]) {
-            if (w.wp[pattern].cv_mode[0] == 0) {
-                cv0 = w.wp[pattern].cv_curves[0][pos];
-            }
+        if ((rnd() % 255) < p->cv_probs[0][pos] && w.cv_mute[0]) {
+            if (p->cv_mode[0] == 0) { cv0 = p->cv_curves[0][pos]; }
             else {
                 uint count = 0;
                 uint16_t found[16];
                 for (uint8_t i = 0; i < 16; i++)
-                    if (w.wp[pattern].cv_steps[0][pos] & (1 << i)) {
+                    if (p->cv_steps[0][pos] & (1 << i)) {
                         found[count] = i;
                         count++;
                     }
@@ -416,20 +411,18 @@ void clock(uint8_t phase) {
                     cv_chosen[0] = found[0];
                 else
                     cv_chosen[0] = found[rnd() % count];
-                cv0 = w.wp[pattern].cv_values[cv_chosen[0]];
+                cv0 = p->cv_values[cv_chosen[0]];
             }
         }
 
         // PARAM 1
-        if ((rnd() % 255) < w.wp[pattern].cv_probs[1][pos] && w.cv_mute[1]) {
-            if (w.wp[pattern].cv_mode[1] == 0) {
-                cv1 = w.wp[pattern].cv_curves[1][pos];
-            }
+        if ((rnd() % 255) < p->cv_probs[1][pos] && w.cv_mute[1]) {
+            if (p->cv_mode[1] == 0) { cv1 = p->cv_curves[1][pos]; }
             else {
                 uint count = 0;
                 uint16_t found[16];
                 for (uint8_t i = 0; i < 16; i++)
-                    if (w.wp[pattern].cv_steps[1][pos] & (1 << i)) {
+                    if (p->cv_steps[1][pos] & (1 << i)) {
                         found[count] = i;
                         count++;
                     }
@@ -438,7 +431,7 @@ void clock(uint8_t phase) {
                 else
                     cv_chosen[1] = found[rnd() % count];
 
-                cv1 = w.wp[pattern].cv_values[cv_chosen[1]];
+                cv1 = p->cv_values[cv_chosen[1]];
             }
         }
 
