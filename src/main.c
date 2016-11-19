@@ -92,46 +92,46 @@ const uint16_t SCALES[24][16] = {
 
 };
 
-typedef enum { mTrig, mMap, mSeries } edit_modes;
+typedef enum { mTrig, mMap, mSeries } edit_mode_t;
 
-typedef enum { mForward, mReverse, mDrunk, mRandom } step_modes;
+typedef enum { mForward, mReverse, mDrunk, mRandom } step_mode_t;
 
 typedef struct {
     uint8_t loop_start, loop_end, loop_len, loop_dir;
     uint16_t step_choice;
     uint8_t cv_mode[2];
     uint8_t tr_mode;
-    step_modes step_mode;
+    step_mode_t step_mode;
     uint8_t steps[16];
     uint8_t step_probs[16];
     uint16_t cv_values[16];
     uint16_t cv_steps[2][16];
     uint16_t cv_curves[2][16];
     uint8_t cv_probs[2][16];
-} whale_pattern;
+} whale_pattern_t;
 
 typedef struct {
-    whale_pattern wp[16];
+    whale_pattern_t wp[16];
     uint16_t series_list[64];
     uint8_t series_start, series_end;
     uint8_t tr_mute[4];
     uint8_t cv_mute[2];
-} whale_set;
+} whale_set_t;
 
 typedef const struct {
     uint8_t fresh;
-    edit_modes edit_mode;
+    edit_mode_t edit_mode;
     uint8_t preset_select;
     uint8_t glyph[8][8];
-    whale_set w[8];
+    whale_set_t w[8];
 } nvram_data_t;
 
-whale_set w;
+whale_set_t w;
 
 uint8_t preset_mode, preset_select, front_timer;
 uint8_t glyph[8];
 
-edit_modes edit_mode;
+edit_mode_t edit_mode;
 uint8_t edit_cv_step, edit_cv_ch;
 int8_t edit_cv_value;
 uint8_t edit_prob, live_in, scale_select;
