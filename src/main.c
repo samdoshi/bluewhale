@@ -766,6 +766,8 @@ static void handler_MonomeGridKey(int32_t data) {
         // OPTIMIZE: order this if-branch by common priority/use
         //// SORT
 
+        whale_pattern_t *p = &w.wp[pattern];
+
         // cut position
         if (y == 1) {
             keycount_pos += z * 2 - 1;
@@ -782,17 +784,17 @@ static void handler_MonomeGridKey(int32_t data) {
                 }
                 else if (key_alt == 1) {
                     if (x == kMaxLoopLength)
-                        w.wp[pattern].step_mode = mForward;
+                        p->step_mode = mForward;
                     else if (x == kMaxLoopLength - 1)
-                        w.wp[pattern].step_mode = mReverse;
+                        p->step_mode = mReverse;
                     else if (x == kMaxLoopLength - 2)
-                        w.wp[pattern].step_mode = mDrunk;
+                        p->step_mode = mDrunk;
                     else if (x == kMaxLoopLength - 3)
-                        w.wp[pattern].step_mode = mRandom;
+                        p->step_mode = mRandom;
                     // FIXME
                     else if (x == 0) {
-                        if (pos == w.wp[pattern].loop_start)
-                            next_pos = w.wp[pattern].loop_end;
+                        if (pos == p->loop_start)
+                            next_pos = p->loop_end;
                         else if (pos == 0)
                             next_pos = kMaxLoopLength;
                         else
@@ -802,8 +804,8 @@ static void handler_MonomeGridKey(int32_t data) {
                     }
                     // FIXME
                     else if (x == 1) {
-                        if (pos == w.wp[pattern].loop_end)
-                            next_pos = w.wp[pattern].loop_start;
+                        if (pos == p->loop_end)
+                            next_pos = p->loop_start;
                         else if (pos == kMaxLoopLength)
                             next_pos = 0;
                         else
@@ -812,32 +814,28 @@ static void handler_MonomeGridKey(int32_t data) {
                         monomeFrameDirty++;
                     }
                     else if (x == 2) {
-                        next_pos = (rnd() % (w.wp[pattern].loop_len + 1)) +
-                                   w.wp[pattern].loop_start;
+                        next_pos = (rnd() % (p->loop_len + 1)) + p->loop_start;
                         cut_pos = 1;
                         monomeFrameDirty++;
                     }
                 }
             }
             else if (keycount_pos == 2 && z) {
-                w.wp[pattern].loop_start = keyfirst_pos;
-                w.wp[pattern].loop_end = x;
+                p->loop_start = keyfirst_pos;
+                p->loop_end = x;
                 monomeFrameDirty++;
-                if (w.wp[pattern].loop_start > w.wp[pattern].loop_end)
-                    w.wp[pattern].loop_dir = 2;
-                else if (w.wp[pattern].loop_start == 0 &&
-                         w.wp[pattern].loop_end == kMaxLoopLength)
-                    w.wp[pattern].loop_dir = 0;
+                if (p->loop_start > p->loop_end)
+                    p->loop_dir = 2;
+                else if (p->loop_start == 0 && p->loop_end == kMaxLoopLength)
+                    p->loop_dir = 0;
                 else
-                    w.wp[pattern].loop_dir = 1;
+                    p->loop_dir = 1;
 
-                w.wp[pattern].loop_len =
-                    w.wp[pattern].loop_end - w.wp[pattern].loop_start;
+                p->loop_len = p->loop_end - p->loop_start;
 
-                if (w.wp[pattern].loop_dir == 2)
-                    w.wp[pattern].loop_len =
-                        (kMaxLoopLength - w.wp[pattern].loop_start) +
-                        w.wp[pattern].loop_end + 1;
+                if (p->loop_dir == 2)
+                    p->loop_len =
+                        (kMaxLoopLength - p->loop_start) + p->loop_end + 1;
             }
         }
 
@@ -853,10 +851,10 @@ static void handler_MonomeGridKey(int32_t data) {
             }
             else if (x < 4 && z) {
                 if (key_alt) {
-                    if (w.wp[pattern].tr_mode == mPulse)
-                        w.wp[pattern].tr_mode = mGate;
+                    if (p->tr_mode == mPulse)
+                        p->tr_mode = mGate;
                     else
-                        w.wp[pattern].tr_mode = mPulse;
+                        p->tr_mode = mPulse;
                 }
                 else if (key_meta)
                     w.tr_mute[x] ^= 1;
@@ -872,7 +870,7 @@ static void handler_MonomeGridKey(int32_t data) {
                 edit_prob = 0;
 
                 if (key_alt)
-                    w.wp[pattern].cv_mode[edit_cv_ch] ^= 1;
+                    p->cv_mode[edit_cv_ch] ^= 1;
                 else if (key_meta)
                     w.cv_mute[edit_cv_ch] ^= 1;
                 else
@@ -893,12 +891,12 @@ static void handler_MonomeGridKey(int32_t data) {
         else if (edit_mode == mTrig) {
             if (z && y > 3 && edit_prob == 0) {
                 if (key_alt)
-                    w.wp[pattern].steps[pos] |= 1 << (y - 4);
+                    p->steps[pos] |= 1 << (y - 4);
                 else if (key_meta) {
-                    w.wp[pattern].step_choice ^= (1 << x);
+                    p->step_choice ^= (1 << x);
                 }
                 else
-                    w.wp[pattern].steps[x] ^= (1 << (y - 4));
+                    p->steps[x] ^= (1 << (y - 4));
                 monomeFrameDirty++;
             }
             // step probs
@@ -906,23 +904,23 @@ static void handler_MonomeGridKey(int32_t data) {
                 if (key_alt)
                     edit_prob = 1;
                 else {
-                    if (w.wp[pattern].step_probs[x] == 255)
-                        w.wp[pattern].step_probs[x] = 0;
+                    if (p->step_probs[x] == 255)
+                        p->step_probs[x] = 0;
                     else
-                        w.wp[pattern].step_probs[x] = 255;
+                        p->step_probs[x] = 255;
                 }
                 monomeFrameDirty++;
             }
             else if (edit_prob == 1) {
                 if (z) {
                     if (y == 4)
-                        w.wp[pattern].step_probs[x] = 192;
+                        p->step_probs[x] = 192;
                     else if (y == 5)
-                        w.wp[pattern].step_probs[x] = 128;
+                        p->step_probs[x] = 128;
                     else if (y == 6)
-                        w.wp[pattern].step_probs[x] = 64;
+                        p->step_probs[x] = 64;
                     else
-                        w.wp[pattern].step_probs[x] = 0;
+                        p->step_probs[x] = 0;
                 }
             }
         }
@@ -934,10 +932,10 @@ static void handler_MonomeGridKey(int32_t data) {
                 if (key_alt)
                     edit_prob = 1;
                 else {
-                    if (w.wp[pattern].cv_probs[edit_cv_ch][x] == 255)
-                        w.wp[pattern].cv_probs[edit_cv_ch][x] = 0;
+                    if (p->cv_probs[edit_cv_ch][x] == 255)
+                        p->cv_probs[edit_cv_ch][x] = 0;
                     else
-                        w.wp[pattern].cv_probs[edit_cv_ch][x] = 255;
+                        p->cv_probs[edit_cv_ch][x] = 255;
                 }
 
                 monomeFrameDirty++;
@@ -945,7 +943,7 @@ static void handler_MonomeGridKey(int32_t data) {
             // edit data
             else if (edit_prob == 0) {
                 // CURVES
-                if (w.wp[pattern].cv_mode[edit_cv_ch] == 0) {
+                if (p->cv_mode[edit_cv_ch] == 0) {
                     if (y == 4 && z) {
                         if (center)
                             delta = 3;
@@ -956,23 +954,18 @@ static void handler_MonomeGridKey(int32_t data) {
 
                         if (key_meta == 0) {
                             // saturate
-                            if (w.wp[pattern].cv_curves[edit_cv_ch][x] + delta <
-                                4092)
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] += delta;
+                            if (p->cv_curves[edit_cv_ch][x] + delta < 4092)
+                                p->cv_curves[edit_cv_ch][x] += delta;
                             else
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] = 4092;
+                                p->cv_curves[edit_cv_ch][x] = 4092;
                         }
                         else {
                             for (i1 = 0; i1 < 16; i1++) {
                                 // saturate
-                                if (w.wp[pattern].cv_curves[edit_cv_ch][i1] +
-                                        delta <
-                                    4092)
-                                    w.wp[pattern].cv_curves[edit_cv_ch][i1] +=
-                                        delta;
+                                if (p->cv_curves[edit_cv_ch][i1] + delta < 4092)
+                                    p->cv_curves[edit_cv_ch][i1] += delta;
                                 else
-                                    w.wp[pattern].cv_curves[edit_cv_ch][i1] =
-                                        4092;
+                                    p->cv_curves[edit_cv_ch][i1] = 4092;
                             }
                         }
                     }
@@ -986,20 +979,18 @@ static void handler_MonomeGridKey(int32_t data) {
 
                         if (key_meta == 0) {
                             // saturate
-                            if (w.wp[pattern].cv_curves[edit_cv_ch][x] > delta)
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] -= delta;
+                            if (p->cv_curves[edit_cv_ch][x] > delta)
+                                p->cv_curves[edit_cv_ch][x] -= delta;
                             else
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] = 0;
+                                p->cv_curves[edit_cv_ch][x] = 0;
                         }
                         else {
                             for (i1 = 0; i1 < 16; i1++) {
                                 // saturate
-                                if (w.wp[pattern].cv_curves[edit_cv_ch][i1] >
-                                    delta)
-                                    w.wp[pattern].cv_curves[edit_cv_ch][i1] -=
-                                        delta;
+                                if (p->cv_curves[edit_cv_ch][i1] > delta)
+                                    p->cv_curves[edit_cv_ch][i1] -= delta;
                                 else
-                                    w.wp[pattern].cv_curves[edit_cv_ch][i1] = 0;
+                                    p->cv_curves[edit_cv_ch][i1] = 0;
                             }
                         }
                     }
@@ -1009,40 +1000,37 @@ static void handler_MonomeGridKey(int32_t data) {
                             if (quantize_in)
                                 quantize_in = 0;
                             else if (key_alt)
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] = clip;
+                                p->cv_curves[edit_cv_ch][x] = clip;
                             else
-                                clip = w.wp[pattern].cv_curves[edit_cv_ch][x];
+                                clip = p->cv_curves[edit_cv_ch][x];
                         }
                         else
                             center = 0;
                     }
                     else if (y == 7) {
                         if (key_alt && z) {
-                            param_dest =
-                                &w.wp[pattern].cv_curves[edit_cv_ch][pos];
-                            w.wp[pattern].cv_curves[edit_cv_ch][pos] =
-                                (adc[1] / 34) * 34;
+                            param_dest = &p->cv_curves[edit_cv_ch][pos];
+                            p->cv_curves[edit_cv_ch][pos] = (adc[1] / 34) * 34;
                             quantize_in = 1;
                             param_accept = 1;
                             live_in = 1;
                         }
                         else if (center && z) {
                             if (key_meta == 0)
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] =
+                                p->cv_curves[edit_cv_ch][x] =
                                     rand() % ((adc[1] / 34) * 34 + 1);
                             else {
                                 for (i1 = 0; i1 < 16; i1++) {
-                                    w.wp[pattern].cv_curves[edit_cv_ch][i1] =
+                                    p->cv_curves[edit_cv_ch][i1] =
                                         rand() % ((adc[1] / 34) * 34 + 1);
                                 }
                             }
                         }
                         else {
                             param_accept = z;
-                            param_dest =
-                                &w.wp[pattern].cv_curves[edit_cv_ch][x];
+                            param_dest = &p->cv_curves[edit_cv_ch][x];
                             if (z) {
-                                w.wp[pattern].cv_curves[edit_cv_ch][x] =
+                                p->cv_curves[edit_cv_ch][x] =
                                     (adc[1] / 34) * 34;
                                 quantize_in = 1;
                             }
@@ -1059,7 +1047,7 @@ static void handler_MonomeGridKey(int32_t data) {
                         index = (y - 4) * 8 + x;
                         if (index < 24 && y < 8) {
                             for (i1 = 0; i1 < 16; i1++)
-                                w.wp[pattern].cv_values[i1] = SCALES[index][i1];
+                                p->cv_values[i1] = SCALES[index][i1];
                         }
 
                         scale_select = 0;
@@ -1070,8 +1058,7 @@ static void handler_MonomeGridKey(int32_t data) {
                             edit_cv_step = x;
                             count = 0;
                             for (i1 = 0; i1 < 16; i1++)
-                                if ((w.wp[pattern]
-                                         .cv_steps[edit_cv_ch][edit_cv_step] >>
+                                if ((p->cv_steps[edit_cv_ch][edit_cv_step] >>
                                      i1) &
                                     1) {
                                     count++;
@@ -1092,8 +1079,7 @@ static void handler_MonomeGridKey(int32_t data) {
                         else if (y == 7 && key_alt && edit_cv_value != -1 &&
                                  x == kMaxLoopLength) {
                             param_accept = z;
-                            param_dest =
-                                &(w.wp[pattern].cv_values[edit_cv_value]);
+                            param_dest = &(p->cv_values[edit_cv_value]);
                         }
                         else if ((y == 5 || y == 6) && z && x < 4 &&
                                  edit_cv_step != -1) {
@@ -1111,31 +1097,24 @@ static void handler_MonomeGridKey(int32_t data) {
 
                             if (key_alt) {
                                 for (i1 = 0; i1 < 16; i1++) {
-                                    if (w.wp[pattern].cv_values[i1] + delta >
-                                        4092)
-                                        w.wp[pattern].cv_values[i1] = 4092;
+                                    if (p->cv_values[i1] + delta > 4092)
+                                        p->cv_values[i1] = 4092;
                                     else if (delta < 0 &&
-                                             w.wp[pattern].cv_values[i1] <
-                                                 -1 * delta)
-                                        w.wp[pattern].cv_values[i1] = 0;
+                                             p->cv_values[i1] < -1 * delta)
+                                        p->cv_values[i1] = 0;
                                     else
-                                        w.wp[pattern].cv_values[i1] += delta;
+                                        p->cv_values[i1] += delta;
                                 }
                             }
                             else {
-                                if (w.wp[pattern].cv_values[edit_cv_value] +
-                                        delta >
-                                    4092)
-                                    w.wp[pattern].cv_values[edit_cv_value] =
-                                        4092;
+                                if (p->cv_values[edit_cv_value] + delta > 4092)
+                                    p->cv_values[edit_cv_value] = 4092;
                                 else if (delta < 0 &&
-                                         w.wp[pattern]
-                                                 .cv_values[edit_cv_value] <
+                                         p->cv_values[edit_cv_value] <
                                              -1 * delta)
-                                    w.wp[pattern].cv_values[edit_cv_value] = 0;
+                                    p->cv_values[edit_cv_value] = 0;
                                 else
-                                    w.wp[pattern].cv_values[edit_cv_value] +=
-                                        delta;
+                                    p->cv_values[edit_cv_value] += delta;
                             }
 
                             monomeFrameDirty++;
@@ -1148,36 +1127,31 @@ static void handler_MonomeGridKey(int32_t data) {
                             if (z) {
                                 count = 0;
                                 for (i1 = 0; i1 < 16; i1++)
-                                    if ((w.wp[pattern].cv_steps[edit_cv_ch]
-                                                               [edit_cv_step] >>
+                                    if ((p->cv_steps[edit_cv_ch]
+                                                    [edit_cv_step] >>
                                          i1) &
                                         1)
                                         count++;
 
                                 // single press toggle
                                 if (keycount_cv == 1 && count < 2) {
-                                    w.wp[pattern]
-                                        .cv_steps[edit_cv_ch][edit_cv_step] =
+                                    p->cv_steps[edit_cv_ch][edit_cv_step] =
                                         (1 << x);
                                     edit_cv_value = x;
                                 }
                                 // multiselect
                                 else if (keycount_cv > 1 || count > 1) {
-                                    w.wp[pattern]
-                                        .cv_steps[edit_cv_ch][edit_cv_step] ^=
+                                    p->cv_steps[edit_cv_ch][edit_cv_step] ^=
                                         (1 << x);
 
-                                    if (!w.wp[pattern].cv_steps[edit_cv_ch]
-                                                               [edit_cv_step])
-                                        w.wp[pattern].cv_steps[edit_cv_ch]
-                                                              [edit_cv_step] =
+                                    if (!p->cv_steps[edit_cv_ch][edit_cv_step])
+                                        p->cv_steps[edit_cv_ch][edit_cv_step] =
                                             (1 << x);
 
                                     count = 0;
                                     for (i1 = 0; i1 < 16; i1++)
-                                        if ((w.wp[pattern]
-                                                 .cv_steps[edit_cv_ch]
-                                                          [edit_cv_step] >>
+                                        if ((p->cv_steps[edit_cv_ch]
+                                                        [edit_cv_step] >>
                                              i1) &
                                             1) {
                                             count++;
@@ -1196,13 +1170,13 @@ static void handler_MonomeGridKey(int32_t data) {
             else if (edit_prob == 1) {
                 if (z) {
                     if (y == 4)
-                        w.wp[pattern].cv_probs[edit_cv_ch][x] = 192;
+                        p->cv_probs[edit_cv_ch][x] = 192;
                     else if (y == 5)
-                        w.wp[pattern].cv_probs[edit_cv_ch][x] = 128;
+                        p->cv_probs[edit_cv_ch][x] = 128;
                     else if (y == 6)
-                        w.wp[pattern].cv_probs[edit_cv_ch][x] = 64;
+                        p->cv_probs[edit_cv_ch][x] = 64;
                     else
-                        w.wp[pattern].cv_probs[edit_cv_ch][x] = 0;
+                        p->cv_probs[edit_cv_ch][x] = 0;
                 }
             }
         }
