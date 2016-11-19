@@ -1,0 +1,1 @@
+- Drop support for mono and 8x8 grids

@@ -158,7 +158,10 @@ uint16_t clock_time, clock_temp;
 uint8_t series_step;
 
 uint16_t adc[4];
-uint8_t SIZE, LENGTH, VARI;
+
+const uint8_t SIZE = 16;
+const uint8_t LENGTH = 15;  // this value should be 16 and the code should be
+                            // modified to that effect
 
 
 // NVRAM data structure located in the flash array.
@@ -541,20 +544,8 @@ static void handler_FtdiDisconnect(int32_t data) {
 }
 
 static void handler_MonomeConnect(int32_t data) {
-    uint8_t i1;
-    // print_dbg("\r\n// monome connect /////////////////");
     keycount_pos = 0;
     key_count = 0;
-    SIZE = monome_size_x();
-    LENGTH = SIZE - 1;
-    // print_dbg("\r monome size: ");
-    // print_dbg_ulong(SIZE);
-    VARI = monome_is_vari();
-    // print_dbg("\r monome vari: ");
-    // print_dbg_ulong(VARI);
-
-    for (i1 = 0; i1 < 16; i1++)
-        if (w.wp[i1].loop_end > LENGTH) w.wp[i1].loop_end = LENGTH;
 
     timers_set_monome();
 }
@@ -876,7 +867,7 @@ static void handler_MonomeGridKey(int32_t data) {
                 param_accept = 0;
                 monomeFrameDirty++;
             }
-            else if (SIZE == 16 && x > 3 && x < 12 && z) {
+            else if (x > 3 && x < 12 && z) {
                 param_accept = 0;
                 edit_cv_ch = (x - 4) / 4;
                 edit_prob = 0;
@@ -887,19 +878,6 @@ static void handler_MonomeGridKey(int32_t data) {
                     w.cv_mute[edit_cv_ch] ^= 1;
                 else
                     edit_mode = mMap;
-
-                monomeFrameDirty++;
-            }
-            else if (SIZE == 8 && (x == 4 || x == 5) && z) {
-                param_accept = 0;
-                edit_cv_ch = x - 4;
-                edit_mode = mMap;
-                edit_prob = 0;
-
-                if (key_alt)
-                    w.wp[pattern].cv_mode[edit_cv_ch] ^= 1;
-                else if (key_meta)
-                    w.cv_mute[edit_cv_ch] ^= 1;
 
                 monomeFrameDirty++;
             }
@@ -1294,14 +1272,10 @@ static void refresh() {
         monomeLedBuffer[3] = 4;
     }
     else if (edit_mode == mMap) {
-        if (SIZE == 16) {
-            monomeLedBuffer[4 + (edit_cv_ch * 4)] = 4;
-            monomeLedBuffer[5 + (edit_cv_ch * 4)] = 4;
-            monomeLedBuffer[6 + (edit_cv_ch * 4)] = 4;
-            monomeLedBuffer[7 + (edit_cv_ch * 4)] = 4;
-        }
-        else
-            monomeLedBuffer[4 + edit_cv_ch] = 4;
+        monomeLedBuffer[4 + (edit_cv_ch * 4)] = 4;
+        monomeLedBuffer[5 + (edit_cv_ch * 4)] = 4;
+        monomeLedBuffer[6 + (edit_cv_ch * 4)] = 4;
+        monomeLedBuffer[7 + (edit_cv_ch * 4)] = 4;
     }
     else if (edit_mode == mSeries) {
         monomeLedBuffer[LENGTH - 1] = 7;
@@ -1331,26 +1305,20 @@ static void refresh() {
 
     // cv indication
     if (key_meta) {
-        if (SIZE == 16) {
-            if (w.cv_mute[0]) {
-                monomeLedBuffer[4] = 11;
-                monomeLedBuffer[5] = 11;
-                monomeLedBuffer[6] = 11;
-                monomeLedBuffer[7] = 11;
-            }
-            if (w.cv_mute[1]) {
-                monomeLedBuffer[8] = 11;
-                monomeLedBuffer[9] = 11;
-                monomeLedBuffer[10] = 11;
-                monomeLedBuffer[11] = 11;
-            }
+        if (w.cv_mute[0]) {
+            monomeLedBuffer[4] = 11;
+            monomeLedBuffer[5] = 11;
+            monomeLedBuffer[6] = 11;
+            monomeLedBuffer[7] = 11;
         }
-        else {
-            if (w.cv_mute[0]) monomeLedBuffer[4] = 11;
-            if (w.cv_mute[1]) monomeLedBuffer[5] = 11;
+        if (w.cv_mute[1]) {
+            monomeLedBuffer[8] = 11;
+            monomeLedBuffer[9] = 11;
+            monomeLedBuffer[10] = 11;
+            monomeLedBuffer[11] = 11;
         }
     }
-    else if (SIZE == 16) {
+    else {
         monomeLedBuffer[cv0 / 1024 + 4] = 11;
         monomeLedBuffer[cv1 / 1024 + 8] = 11;
     }
@@ -1919,9 +1887,6 @@ int main(void) {
         flash_read();
         for (i1 = 0; i1 < 8; i1++) glyph[i1] = flashy.glyph[preset_select][i1];
     }
-
-    LENGTH = 15;
-    SIZE = 16;
 
     process_ii = &ww_process_ii;
 
