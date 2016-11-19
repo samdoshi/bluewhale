@@ -204,9 +204,6 @@ void flash_read(void);
 // application clock code
 
 void clock(uint8_t phase) {
-    static uint8_t i1, count;
-    static uint16_t found[16];
-
     if (phase) {
         gpio_set_gpio_pin(B10);
 
@@ -226,10 +223,11 @@ void clock(uint8_t phase) {
                 if (series_next > 63) series_next = w.series_start;
             }
 
-            count = 0;
-            for (i1 = 0; i1 < 16; i1++) {
-                if ((w.series_list[series_pos] >> i1) & 1) {
-                    found[count] = i1;
+            uint count = 0;
+            uint16_t found[16];
+            for (uint8_t i = 0; i < 16; i++) {
+                if ((w.series_list[series_pos] >> i) & 1) {
+                    found[count] = i;
                     count++;
                 }
             }
@@ -342,10 +340,11 @@ void clock(uint8_t phase) {
         triggered = 0;
         if ((rnd() % 255) < w.wp[pattern].step_probs[pos]) {
             if (w.wp[pattern].step_choice & 1 << pos) {
-                count = 0;
-                for (i1 = 0; i1 < 4; i1++)
-                    if (w.wp[pattern].steps[pos] >> i1 & 1) {
-                        found[count] = i1;
+                uint count = 0;
+                uint16_t found[16];
+                for (uint8_t i = 0; i < 4; i++)
+                    if (w.wp[pattern].steps[pos] >> i & 1) {
+                        found[count] = i;
                         count++;
                     }
 
@@ -403,10 +402,11 @@ void clock(uint8_t phase) {
                 cv0 = w.wp[pattern].cv_curves[0][pos];
             }
             else {
-                count = 0;
-                for (i1 = 0; i1 < 16; i1++)
-                    if (w.wp[pattern].cv_steps[0][pos] & (1 << i1)) {
-                        found[count] = i1;
+                uint count = 0;
+                uint16_t found[16];
+                for (uint8_t i = 0; i < 16; i++)
+                    if (w.wp[pattern].cv_steps[0][pos] & (1 << i)) {
+                        found[count] = i;
                         count++;
                     }
                 if (count == 1)
@@ -423,10 +423,11 @@ void clock(uint8_t phase) {
                 cv1 = w.wp[pattern].cv_curves[1][pos];
             }
             else {
-                count = 0;
-                for (i1 = 0; i1 < 16; i1++)
-                    if (w.wp[pattern].cv_steps[1][pos] & (1 << i1)) {
-                        found[count] = i1;
+                uint count = 0;
+                uint16_t found[16];
+                for (uint8_t i = 0; i < 16; i++)
+                    if (w.wp[pattern].cv_steps[1][pos] & (1 << i)) {
+                        found[count] = i;
                         count++;
                     }
                 if (count == 1)
@@ -462,9 +463,6 @@ void clock(uint8_t phase) {
             gpio_clr_gpio_pin(B03);
         }
     }
-
-    // print_dbg("\r\n pos: ");
-    // print_dbg_ulong(pos);
 }
 
 
