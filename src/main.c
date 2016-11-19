@@ -38,7 +38,7 @@
 #define FIRSTRUN_KEY 0x22
 
 
-const u16 SCALES[24][16] = {
+const uint16_t SCALES[24][16] = {
 
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },  // ZERO
     { 0, 68, 136, 170, 238, 306, 375, 409, 477, 545, 579, 647, 715, 784, 818,
@@ -97,68 +97,68 @@ typedef enum { mTrig, mMap, mSeries } edit_modes;
 typedef enum { mForward, mReverse, mDrunk, mRandom } step_modes;
 
 typedef struct {
-    u8 loop_start, loop_end, loop_len, loop_dir;
-    u16 step_choice;
-    u8 cv_mode[2];
-    u8 tr_mode;
+    uint8_t loop_start, loop_end, loop_len, loop_dir;
+    uint16_t step_choice;
+    uint8_t cv_mode[2];
+    uint8_t tr_mode;
     step_modes step_mode;
-    u8 steps[16];
-    u8 step_probs[16];
-    u16 cv_values[16];
-    u16 cv_steps[2][16];
-    u16 cv_curves[2][16];
-    u8 cv_probs[2][16];
+    uint8_t steps[16];
+    uint8_t step_probs[16];
+    uint16_t cv_values[16];
+    uint16_t cv_steps[2][16];
+    uint16_t cv_curves[2][16];
+    uint8_t cv_probs[2][16];
 } whale_pattern;
 
 typedef struct {
     whale_pattern wp[16];
-    u16 series_list[64];
-    u8 series_start, series_end;
-    u8 tr_mute[4];
-    u8 cv_mute[2];
+    uint16_t series_list[64];
+    uint8_t series_start, series_end;
+    uint8_t tr_mute[4];
+    uint8_t cv_mute[2];
 } whale_set;
 
 typedef const struct {
-    u8 fresh;
+    uint8_t fresh;
     edit_modes edit_mode;
-    u8 preset_select;
-    u8 glyph[8][8];
+    uint8_t preset_select;
+    uint8_t glyph[8][8];
     whale_set w[8];
 } nvram_data_t;
 
 whale_set w;
 
-u8 preset_mode, preset_select, front_timer;
-u8 glyph[8];
+uint8_t preset_mode, preset_select, front_timer;
+uint8_t glyph[8];
 
 edit_modes edit_mode;
-u8 edit_cv_step, edit_cv_ch;
-s8 edit_cv_value;
-u8 edit_prob, live_in, scale_select;
-u8 pattern, next_pattern, pattern_jump;
+uint8_t edit_cv_step, edit_cv_ch;
+int8_t edit_cv_value;
+uint8_t edit_prob, live_in, scale_select;
+uint8_t pattern, next_pattern, pattern_jump;
 
-u8 series_pos, series_next, series_jump, series_playing, scroll_pos;
+uint8_t series_pos, series_next, series_jump, series_playing, scroll_pos;
 
-u8 key_alt, key_meta, center;
-u8 held_keys[32], key_count, key_times[256];
-u8 keyfirst_pos, keysecond_pos;
-s8 keycount_pos, keycount_series, keycount_cv;
+uint8_t key_alt, key_meta, center;
+uint8_t held_keys[32], key_count, key_times[256];
+uint8_t keyfirst_pos, keysecond_pos;
+int8_t keycount_pos, keycount_series, keycount_cv;
 
-s8 pos, cut_pos, next_pos, drunk_step, triggered;
-u8 cv_chosen[2];
-u16 cv0, cv1;
+int8_t pos, cut_pos, next_pos, drunk_step, triggered;
+uint8_t cv_chosen[2];
+uint16_t cv0, cv1;
 
-u8 param_accept, *param_dest8;
-u16 clip;
-u16 *param_dest;
-u8 quantize_in;
+uint8_t param_accept, *param_dest8;
+uint16_t clip;
+uint16_t *param_dest;
+uint8_t quantize_in;
 
-u8 clock_phase;
-u16 clock_time, clock_temp;
-u8 series_step;
+uint8_t clock_phase;
+uint16_t clock_time, clock_temp;
+uint8_t series_step;
 
-u16 adc[4];
-u8 SIZE, LENGTH, VARI;
+uint16_t adc[4];
+uint8_t SIZE, LENGTH, VARI;
 
 
 // NVRAM data structure located in the flash array.
@@ -170,7 +170,7 @@ __attribute__((__section__(".flash_nvram"))) static nvram_data_t flashy;
 
 static void refresh(void);
 static void refresh_preset(void);
-static void clock(u8 phase);
+static void clock(uint8_t phase);
 
 // start/stop monome polling/refresh timers
 extern void timers_set_monome(void);
@@ -180,18 +180,18 @@ extern void timers_unset_monome(void);
 static void check_events(void);
 
 // handler protos
-static void handler_None(s32 data) {
+static void handler_None(int32_t data) {
     ;
     ;
 }
-static void handler_KeyTimer(s32 data);
-static void handler_Front(s32 data);
-static void handler_ClockNormal(s32 data);
-static void handler_ClockExt(s32 data);
+static void handler_KeyTimer(int32_t data);
+static void handler_Front(int32_t data);
+static void handler_ClockNormal(int32_t data);
+static void handler_ClockExt(int32_t data);
 
 static void ww_process_ii(uint8_t *data, uint8_t l);
 
-u8 flash_is_fresh(void);
+uint8_t flash_is_fresh(void);
 void flash_unfresh(void);
 void flash_write(void);
 void flash_read(void);
@@ -203,9 +203,9 @@ void flash_read(void);
 ////////////////////////////////////////////////////////////////////////////////
 // application clock code
 
-void clock(u8 phase) {
-    static u8 i1, count;
-    static u16 found[16];
+void clock(uint8_t phase) {
+    static uint8_t i1, count;
+    static uint16_t found[16];
 
     if (phase) {
         gpio_set_gpio_pin(B10);
@@ -535,15 +535,15 @@ void timers_unset_monome(void) {
 ////////////////////////////////////////////////////////////////////////////////
 // event handlers
 
-static void handler_FtdiConnect(s32 data) {
+static void handler_FtdiConnect(int32_t data) {
     ftdi_setup();
 }
-static void handler_FtdiDisconnect(s32 data) {
+static void handler_FtdiDisconnect(int32_t data) {
     timers_unset_monome();
 }
 
-static void handler_MonomeConnect(s32 data) {
-    u8 i1;
+static void handler_MonomeConnect(int32_t data) {
+    uint8_t i1;
     // print_dbg("\r\n// monome connect /////////////////");
     keycount_pos = 0;
     key_count = 0;
@@ -561,10 +561,10 @@ static void handler_MonomeConnect(s32 data) {
     timers_set_monome();
 }
 
-static void handler_MonomePoll(s32 data) {
+static void handler_MonomePoll(int32_t data) {
     monome_read_serial();
 }
-static void handler_MonomeRefresh(s32 data) {
+static void handler_MonomeRefresh(int32_t data) {
     if (monomeFrameDirty) {
         if (preset_mode == 0)
             refresh();
@@ -576,7 +576,7 @@ static void handler_MonomeRefresh(s32 data) {
 }
 
 
-static void handler_Front(s32 data) {
+static void handler_Front(int32_t data) {
     print_dbg("\r\n FRONT HOLD");
 
     if (data == 0) {
@@ -593,8 +593,8 @@ static void handler_Front(s32 data) {
     monomeFrameDirty++;
 }
 
-static void handler_PollADC(s32 data) {
-    u16 i;
+static void handler_PollADC(int32_t data) {
+    uint16_t i;
     adc_convert(&adc);
 
     // CLOCK POT INPUT
@@ -629,12 +629,12 @@ static void handler_PollADC(s32 data) {
     }
 }
 
-static void handler_SaveFlash(s32 data) {
+static void handler_SaveFlash(int32_t data) {
     flash_write();
 }
 
-static void handler_KeyTimer(s32 data) {
-    static u16 i1, x, n1;
+static void handler_KeyTimer(int32_t data) {
+    static uint16_t i1, x, n1;
 
     if (front_timer) {
         if (front_timer == 1) {
@@ -705,11 +705,11 @@ static void handler_KeyTimer(s32 data) {
     }
 }
 
-static void handler_ClockNormal(s32 data) {
+static void handler_ClockNormal(int32_t data) {
     clock_external = !gpio_get_pin_value(B09);
 }
 
-static void handler_ClockExt(s32 data) {
+static void handler_ClockExt(int32_t data) {
     clock(data);
 }
 
@@ -720,9 +720,9 @@ static void handler_ClockExt(s32 data) {
 ////////////////////////////////////////////////////////////////////////////////
 // application grid code
 
-static void handler_MonomeGridKey(s32 data) {
-    u8 x, y, z, index, i1, found, count;
-    s16 delta;
+static void handler_MonomeGridKey(int32_t data) {
+    uint8_t x, y, z, index, i1, found, count;
+    int16_t delta;
     monome_grid_key_parse_event_data(data, &x, &y, &z);
 
     //// TRACK LONG PRESSES
@@ -1277,7 +1277,7 @@ static void handler_MonomeGridKey(s32 data) {
 ////////////////////////////////////////////////////////////////////////////////
 // application grid redraw
 static void refresh() {
-    u8 i1, i2;
+    uint8_t i1, i2;
 
 
     // clear top, cut, pattern, prob
@@ -1594,7 +1594,7 @@ static void refresh() {
 
 
 static void refresh_preset() {
-    u8 i1, i2;
+    uint8_t i1, i2;
 
     for (i1 = 0; i1 < 128; i1++) monomeLedBuffer[i1] = 0;
 
@@ -1755,7 +1755,7 @@ void check_events(void) {
 }
 
 // flash commands
-u8 flash_is_fresh(void) {
+uint8_t flash_is_fresh(void) {
     return (flashy.fresh != FIRSTRUN_KEY);
 }
 
@@ -1773,7 +1773,7 @@ void flash_write(void) {
 }
 
 void flash_read(void) {
-    u8 i1, i2;
+    uint8_t i1, i2;
 
     print_dbg("\r\n read preset ");
     print_dbg_ulong(preset_select);
@@ -1831,7 +1831,7 @@ void flash_read(void) {
 // main
 
 int main(void) {
-    u8 i1, i2;
+    uint8_t i1, i2;
 
     sysclk_init();
 
