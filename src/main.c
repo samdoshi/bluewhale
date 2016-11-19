@@ -159,9 +159,9 @@ uint8_t series_step;
 
 uint16_t adc[4];
 
-const uint8_t SIZE = 16;
-const uint8_t LENGTH = 15;  // this value should be 16 and the code should be
-                            // modified to that effect
+const uint8_t kGridWidth = 16;
+const uint8_t kMaxLoopLength = 15;  // this value should be 16 and the code
+                                    // should be modified to that effect
 
 
 // NVRAM data structure located in the flash array.
@@ -264,7 +264,7 @@ void clock(uint8_t phase) {
         if (w.wp[pattern].step_mode == mForward) {  // FORWARD
             if (pos == w.wp[pattern].loop_end)
                 next_pos = w.wp[pattern].loop_start;
-            else if (pos >= LENGTH)
+            else if (pos >= kMaxLoopLength)
                 next_pos = 0;
             else
                 next_pos++;
@@ -274,7 +274,7 @@ void clock(uint8_t phase) {
             if (pos == w.wp[pattern].loop_start)
                 next_pos = w.wp[pattern].loop_end;
             else if (pos <= 0)
-                next_pos = LENGTH;
+                next_pos = kMaxLoopLength;
             else
                 next_pos--;
             cut_pos = 0;
@@ -288,8 +288,8 @@ void clock(uint8_t phase) {
 
             next_pos += drunk_step;
             if (next_pos < 0)
-                next_pos = LENGTH;
-            else if (next_pos > LENGTH)
+                next_pos = kMaxLoopLength;
+            else if (next_pos > kMaxLoopLength)
                 next_pos = 0;
             else if (w.wp[pattern].loop_dir == 1 &&
                      next_pos < w.wp[pattern].loop_start)
@@ -313,7 +313,7 @@ void clock(uint8_t phase) {
                        w.wp[pattern].loop_start;
             // print_dbg("\r\nnext pos:");
             // print_dbg_ulong(next_pos);
-            if (next_pos > LENGTH) next_pos -= LENGTH + 1;
+            if (next_pos > kMaxLoopLength) next_pos -= kMaxLoopLength + 1;
             cut_pos = 1;
         }
 
@@ -786,20 +786,20 @@ static void handler_MonomeGridKey(int32_t data) {
                     keyfirst_pos = x;
                 }
                 else if (key_alt == 1) {
-                    if (x == LENGTH)
+                    if (x == kMaxLoopLength)
                         w.wp[pattern].step_mode = mForward;
-                    else if (x == LENGTH - 1)
+                    else if (x == kMaxLoopLength - 1)
                         w.wp[pattern].step_mode = mReverse;
-                    else if (x == LENGTH - 2)
+                    else if (x == kMaxLoopLength - 2)
                         w.wp[pattern].step_mode = mDrunk;
-                    else if (x == LENGTH - 3)
+                    else if (x == kMaxLoopLength - 3)
                         w.wp[pattern].step_mode = mRandom;
                     // FIXME
                     else if (x == 0) {
                         if (pos == w.wp[pattern].loop_start)
                             next_pos = w.wp[pattern].loop_end;
                         else if (pos == 0)
-                            next_pos = LENGTH;
+                            next_pos = kMaxLoopLength;
                         else
                             next_pos--;
                         cut_pos = 1;
@@ -809,7 +809,7 @@ static void handler_MonomeGridKey(int32_t data) {
                     else if (x == 1) {
                         if (pos == w.wp[pattern].loop_end)
                             next_pos = w.wp[pattern].loop_start;
-                        else if (pos == LENGTH)
+                        else if (pos == kMaxLoopLength)
                             next_pos = 0;
                         else
                             next_pos++;
@@ -831,7 +831,7 @@ static void handler_MonomeGridKey(int32_t data) {
                 if (w.wp[pattern].loop_start > w.wp[pattern].loop_end)
                     w.wp[pattern].loop_dir = 2;
                 else if (w.wp[pattern].loop_start == 0 &&
-                         w.wp[pattern].loop_end == LENGTH)
+                         w.wp[pattern].loop_end == kMaxLoopLength)
                     w.wp[pattern].loop_dir = 0;
                 else
                     w.wp[pattern].loop_dir = 1;
@@ -841,14 +841,14 @@ static void handler_MonomeGridKey(int32_t data) {
 
                 if (w.wp[pattern].loop_dir == 2)
                     w.wp[pattern].loop_len =
-                        (LENGTH - w.wp[pattern].loop_start) +
+                        (kMaxLoopLength - w.wp[pattern].loop_start) +
                         w.wp[pattern].loop_end + 1;
             }
         }
 
         // top row
         else if (y == 0) {
-            if (x == LENGTH) {
+            if (x == kMaxLoopLength) {
                 key_alt = z;
                 if (z == 0) {
                     param_accept = 0;
@@ -881,11 +881,11 @@ static void handler_MonomeGridKey(int32_t data) {
 
                 monomeFrameDirty++;
             }
-            else if (x == LENGTH - 1 && z && key_alt) {
+            else if (x == kMaxLoopLength - 1 && z && key_alt) {
                 edit_mode = mSeries;
                 monomeFrameDirty++;
             }
-            else if (x == LENGTH - 1)
+            else if (x == kMaxLoopLength - 1)
                 key_meta = z;
         }
 
@@ -1091,7 +1091,7 @@ static void handler_MonomeGridKey(int32_t data) {
                         }
                         // read pot
                         else if (y == 7 && key_alt && edit_cv_value != -1 &&
-                                 x == LENGTH) {
+                                 x == kMaxLoopLength) {
                             param_accept = z;
                             param_dest =
                                 &(w.wp[pattern].cv_values[edit_cv_value]);
@@ -1213,9 +1213,9 @@ static void handler_MonomeGridKey(int32_t data) {
             if (z && key_alt) {
                 if (x == 0)
                     series_next = y - 2 + scroll_pos;
-                else if (x == LENGTH - 1)
+                else if (x == kMaxLoopLength - 1)
                     w.series_start = y - 2 + scroll_pos;
-                else if (x == LENGTH)
+                else if (x == kMaxLoopLength)
                     w.series_end = y - 2 + scroll_pos;
 
                 if (w.series_end < w.series_start)
@@ -1278,12 +1278,12 @@ static void refresh() {
         monomeLedBuffer[7 + (edit_cv_ch * 4)] = 4;
     }
     else if (edit_mode == mSeries) {
-        monomeLedBuffer[LENGTH - 1] = 7;
+        monomeLedBuffer[kMaxLoopLength - 1] = 7;
     }
 
     // alt
-    monomeLedBuffer[LENGTH] = 4;
-    if (key_alt) monomeLedBuffer[LENGTH] = 11;
+    monomeLedBuffer[kMaxLoopLength] = 4;
+    if (key_alt) monomeLedBuffer[kMaxLoopLength] = 11;
 
     // show mutes or on steps
     if (key_meta) {
@@ -1325,7 +1325,7 @@ static void refresh() {
 
     // show pos loop dim
     if (w.wp[pattern].loop_dir) {
-        for (i1 = 0; i1 < SIZE; i1++) {
+        for (i1 = 0; i1 < kGridWidth; i1++) {
             if (w.wp[pattern].loop_dir == 1 && i1 >= w.wp[pattern].loop_start &&
                 i1 <= w.wp[pattern].loop_end)
                 monomeLedBuffer[16 + i1] = 4;
@@ -1347,7 +1347,7 @@ static void refresh() {
     // show step data
     if (edit_mode == mTrig) {
         if (edit_prob == 0) {
-            for (i1 = 0; i1 < SIZE; i1++) {
+            for (i1 = 0; i1 < kGridWidth; i1++) {
                 for (i2 = 0; i2 < 4; i2++) {
                     if ((w.wp[pattern].steps[i1] & (1 << i2)) && i1 == pos &&
                         (triggered & 1 << i2) && w.tr_mute[i2])
@@ -1371,7 +1371,7 @@ static void refresh() {
             }
         }
         else if (edit_prob == 1) {
-            for (i1 = 0; i1 < SIZE; i1++) {
+            for (i1 = 0; i1 < kGridWidth; i1++) {
                 monomeLedBuffer[64 + i1] = 4;
                 monomeLedBuffer[80 + i1] = 4;
                 monomeLedBuffer[96 + i1] = 4;
@@ -1399,7 +1399,7 @@ static void refresh() {
         if (edit_prob == 0) {
             // CURVES
             if (w.wp[pattern].cv_mode[edit_cv_ch] == 0) {
-                for (i1 = 0; i1 < SIZE; i1++) {
+                for (i1 = 0; i1 < kGridWidth; i1++) {
                     // probs
                     if (w.wp[pattern].cv_probs[edit_cv_ch][i1] == 255)
                         monomeLedBuffer[48 + i1] = 11;
@@ -1430,7 +1430,7 @@ static void refresh() {
             // MAP
             else {
                 if (!scale_select) {
-                    for (i1 = 0; i1 < SIZE; i1++) {
+                    for (i1 = 0; i1 < kGridWidth; i1++) {
                         // probs
                         if (w.wp[pattern].cv_probs[edit_cv_ch][i1] == 255)
                             monomeLedBuffer[48 + i1] = 11;
@@ -1475,7 +1475,7 @@ static void refresh() {
                     monomeLedBuffer[112 + cv_chosen[edit_cv_ch]] = 11;
                 }
                 else {
-                    for (i1 = 0; i1 < SIZE; i1++) {
+                    for (i1 = 0; i1 < kGridWidth; i1++) {
                         // probs
                         if (w.wp[pattern].cv_probs[edit_cv_ch][i1] == 255)
                             monomeLedBuffer[48 + i1] = 11;
@@ -1493,7 +1493,7 @@ static void refresh() {
             }
         }
         else if (edit_prob == 1) {
-            for (i1 = 0; i1 < SIZE; i1++) {
+            for (i1 = 0; i1 < kGridWidth; i1++) {
                 monomeLedBuffer[64 + i1] = 4;
                 monomeLedBuffer[80 + i1] = 4;
                 monomeLedBuffer[96 + i1] = 4;
@@ -1520,7 +1520,7 @@ static void refresh() {
     // series
     else if (edit_mode == mSeries) {
         for (i1 = 0; i1 < 6; i1++) {
-            for (i2 = 0; i2 < SIZE; i2++) {
+            for (i2 = 0; i2 < kGridWidth; i2++) {
                 // start/end bars, clear
                 if (i1 + scroll_pos == w.series_start ||
                     i1 + scroll_pos == w.series_end)
@@ -1530,17 +1530,17 @@ static void refresh() {
             }
 
             // scroll position helper
-            monomeLedBuffer[32 + i1 * 16 + ((scroll_pos + i1) / (64 / SIZE))] =
-                4;
+            monomeLedBuffer[32 + i1 * 16 +
+                            ((scroll_pos + i1) / (64 / kGridWidth))] = 4;
 
             // sidebar selection indicators
             if (i1 + scroll_pos > w.series_start &&
                 i1 + scroll_pos < w.series_end) {
                 monomeLedBuffer[32 + i1 * 16] = 4;
-                monomeLedBuffer[32 + i1 * 16 + LENGTH] = 4;
+                monomeLedBuffer[32 + i1 * 16 + kMaxLoopLength] = 4;
             }
 
-            for (i2 = 0; i2 < SIZE; i2++) {
+            for (i2 = 0; i2 < kGridWidth; i2++) {
                 // show possible states
                 if ((w.series_list[i1 + scroll_pos] >> i2) & 1)
                     monomeLedBuffer[32 + (i1 * 16) + i2] = 7;
@@ -1608,7 +1608,7 @@ static void ww_process_ii(uint8_t *data, uint8_t l) {
             if (w.wp[pattern].loop_start > w.wp[pattern].loop_end)
                 w.wp[pattern].loop_dir = 2;
             else if (w.wp[pattern].loop_start == 0 &&
-                     w.wp[pattern].loop_end == LENGTH)
+                     w.wp[pattern].loop_end == kMaxLoopLength)
                 w.wp[pattern].loop_dir = 0;
             else
                 w.wp[pattern].loop_dir = 1;
@@ -1617,8 +1617,9 @@ static void ww_process_ii(uint8_t *data, uint8_t l) {
                 w.wp[pattern].loop_end - w.wp[pattern].loop_start;
 
             if (w.wp[pattern].loop_dir == 2)
-                w.wp[pattern].loop_len = (LENGTH - w.wp[pattern].loop_start) +
-                                         w.wp[pattern].loop_end + 1;
+                w.wp[pattern].loop_len =
+                    (kMaxLoopLength - w.wp[pattern].loop_start) +
+                    w.wp[pattern].loop_end + 1;
             monomeFrameDirty++;
             break;
         case WW_END:
@@ -1627,7 +1628,7 @@ static void ww_process_ii(uint8_t *data, uint8_t l) {
             if (w.wp[pattern].loop_start > w.wp[pattern].loop_end)
                 w.wp[pattern].loop_dir = 2;
             else if (w.wp[pattern].loop_start == 0 &&
-                     w.wp[pattern].loop_end == LENGTH)
+                     w.wp[pattern].loop_end == kMaxLoopLength)
                 w.wp[pattern].loop_dir = 0;
             else
                 w.wp[pattern].loop_dir = 1;
@@ -1636,8 +1637,9 @@ static void ww_process_ii(uint8_t *data, uint8_t l) {
                 w.wp[pattern].loop_end - w.wp[pattern].loop_start;
 
             if (w.wp[pattern].loop_dir == 2)
-                w.wp[pattern].loop_len = (LENGTH - w.wp[pattern].loop_start) +
-                                         w.wp[pattern].loop_end + 1;
+                w.wp[pattern].loop_len =
+                    (kMaxLoopLength - w.wp[pattern].loop_start) +
+                    w.wp[pattern].loop_end + 1;
             monomeFrameDirty++;
             break;
         case WW_PMODE:
