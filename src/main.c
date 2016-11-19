@@ -1796,8 +1796,6 @@ void flash_read(void) {
 // main
 
 int main(void) {
-    uint8_t i1, i2;
-
     sysclk_init();
 
     init_dbg_rs232(FMCK_HZ);
@@ -1836,27 +1834,27 @@ int main(void) {
 
 
         // clear out some reasonable defaults
-        for (i1 = 0; i1 < 16; i1++) {
-            for (i2 = 0; i2 < 16; i2++) {
-                w.wp[i1].steps[i2] = 0;
-                w.wp[i1].step_probs[i2] = 255;
-                w.wp[i1].cv_probs[0][i2] = 255;
-                w.wp[i1].cv_probs[1][i2] = 255;
-                w.wp[i1].cv_curves[0][i2] = 0;
-                w.wp[i1].cv_curves[1][i2] = 0;
-                w.wp[i1].cv_values[i2] = SCALES[2][i2];
-                w.wp[i1].cv_steps[0][i2] = 1 << i2;
-                w.wp[i1].cv_steps[1][i2] = 1 << i2;
+        for (uint8_t i = 0; i < 16; i++) {
+            for (uint8_t j = 0; j < 16; j++) {
+                w.wp[i].steps[j] = 0;
+                w.wp[i].step_probs[j] = 255;
+                w.wp[i].cv_probs[0][j] = 255;
+                w.wp[i].cv_probs[1][j] = 255;
+                w.wp[i].cv_curves[0][j] = 0;
+                w.wp[i].cv_curves[1][j] = 0;
+                w.wp[i].cv_values[j] = SCALES[2][j];
+                w.wp[i].cv_steps[0][j] = 1 << j;
+                w.wp[i].cv_steps[1][j] = 1 << j;
             }
-            w.wp[i1].step_choice = 0;
-            w.wp[i1].loop_end = 15;
-            w.wp[i1].loop_len = 15;
-            w.wp[i1].loop_start = 0;
-            w.wp[i1].loop_dir = 0;
-            w.wp[i1].step_mode = mForward;
-            w.wp[i1].cv_mode[0] = 0;
-            w.wp[i1].cv_mode[1] = 0;
-            w.wp[i1].tr_mode = mPulse;
+            w.wp[i].step_choice = 0;
+            w.wp[i].loop_end = 15;
+            w.wp[i].loop_len = 15;
+            w.wp[i].loop_start = 0;
+            w.wp[i].loop_dir = 0;
+            w.wp[i].step_mode = mForward;
+            w.wp[i].cv_mode[0] = 0;
+            w.wp[i].cv_mode[1] = 0;
+            w.wp[i].tr_mode = mPulse;
         }
 
         w.series_start = 0;
@@ -1869,13 +1867,13 @@ int main(void) {
         w.cv_mute[0] = 1;
         w.cv_mute[1] = 1;
 
-        for (i1 = 0; i1 < 64; i1++) w.series_list[i1] = 1;
+        for (uint8_t i = 0; i < 64; i++) w.series_list[i] = 1;
 
         // save all presets, clear glyphs
-        for (i1 = 0; i1 < 8; i1++) {
-            flashc_memcpy((void *)&flashy.w[i1], &w, sizeof(w), true);
-            glyph[i1] = (1 << i1);
-            flashc_memcpy((void *)&flashy.glyph[i1], &glyph, sizeof(glyph),
+        for (uint8_t i = 0; i < 8; i++) {
+            flashc_memcpy((void *)&flashy.w[i], &w, sizeof(w), true);
+            glyph[i] = (1 << i);
+            flashc_memcpy((void *)&flashy.glyph[i], &glyph, sizeof(glyph),
                           true);
         }
     }
@@ -1884,7 +1882,8 @@ int main(void) {
         preset_select = flashy.preset_select;
         edit_mode = flashy.edit_mode;
         flash_read();
-        for (i1 = 0; i1 < 8; i1++) glyph[i1] = flashy.glyph[preset_select][i1];
+        for (uint8_t i = 0; i < 8; i++)
+            glyph[i] = flashy.glyph[preset_select][i];
     }
 
     process_ii = &ww_process_ii;
