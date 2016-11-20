@@ -92,7 +92,7 @@ const uint16_t SCALES[24][16] = {
 
 };
 
-typedef enum { mTrig, mMap, mSeries } edit_mode_t;
+typedef enum { mTrig, mCV, mSeries } edit_mode_t;
 
 typedef enum { mForward, mReverse, mDrunk, mRandom } step_mode_t;
 
@@ -874,7 +874,7 @@ static void handler_MonomeGridKey(int32_t data) {
                 else if (key_meta)
                     w.cv_mute[edit_cv_ch] ^= 1;
                 else
-                    edit_mode = mMap;
+                    edit_mode = mCV;
 
                 monomeFrameDirty++;
             }
@@ -926,7 +926,7 @@ static void handler_MonomeGridKey(int32_t data) {
         }
 
         // edit map and probs
-        else if (edit_mode == mMap) {
+        else if (edit_mode == mCV) {
             // step probs
             if (z && y == 3) {
                 if (key_alt)
@@ -1245,7 +1245,7 @@ static void refresh() {
         monomeLedBuffer[2] = 4;
         monomeLedBuffer[3] = 4;
     }
-    else if (edit_mode == mMap) {
+    else if (edit_mode == mCV) {
         monomeLedBuffer[4 + (edit_cv_ch * 4)] = 4;
         monomeLedBuffer[5 + (edit_cv_ch * 4)] = 4;
         monomeLedBuffer[6 + (edit_cv_ch * 4)] = 4;
@@ -1363,7 +1363,7 @@ static void refresh() {
     }
 
     // show map
-    else if (edit_mode == mMap) {
+    else if (edit_mode == mCV) {
         if (edit_prob == 0) {
             // CURVES
             if (p->cv_mode[edit_cv_ch] == 0) {
