@@ -101,14 +101,12 @@ typedef enum { mPulse, mGate } tr_mode_t;
 typedef struct {
     uint8_t loop_start, loop_end, loop_len, loop_dir;
     uint16_t step_choice;
-    uint8_t cv_mode[2];
     tr_mode_t tr_mode;
     step_mode_t step_mode;
     uint8_t steps[16];
     uint8_t step_probs[16];
     uint16_t cv_values[16];
     uint16_t cv_steps[2][16];
-    uint16_t cv_curves[2][16];
     uint8_t cv_probs[2][16];
 } whale_pattern_t;
 
@@ -136,7 +134,7 @@ uint8_t glyph[8];
 edit_mode_t edit_mode;
 uint8_t edit_cv_step, edit_cv_ch;
 int8_t edit_cv_value;
-uint8_t edit_prob, live_in, scale_select;
+uint8_t edit_prob, scale_select;
 uint8_t pattern, next_pattern, pattern_jump;
 
 uint8_t series_pos, series_next, series_jump, series_playing, scroll_pos;
@@ -258,12 +256,6 @@ void clock(uint8_t phase) {
         pos = next_pos;
 
         whale_pattern_t *p = &w.wp[pattern];
-
-        // live param record
-        if (param_accept && live_in) {
-            param_dest = &p->cv_curves[edit_cv_ch][pos];
-            p->cv_curves[edit_cv_ch][pos] = adc[1];
-        }
 
         // calc next step
         if (p->step_mode == mForward) {  // FORWARD
@@ -400,41 +392,35 @@ void clock(uint8_t phase) {
 
         // PARAM 0
         if ((rnd() % 255) < p->cv_probs[0][pos] && w.cv_mute[0]) {
-            if (p->cv_mode[0] == 0) { cv0 = p->cv_curves[0][pos]; }
-            else {
-                uint count = 0;
-                uint16_t found[16];
-                for (uint8_t i = 0; i < 16; i++)
-                    if (p->cv_steps[0][pos] & (1 << i)) {
-                        found[count] = i;
-                        count++;
-                    }
-                if (count == 1)
-                    cv_chosen[0] = found[0];
-                else
-                    cv_chosen[0] = found[rnd() % count];
-                cv0 = p->cv_values[cv_chosen[0]];
-            }
+            uint count = 0;
+            uint16_t found[16];
+            for (uint8_t i = 0; i < 16; i++)
+                if (p->cv_steps[0][pos] & (1 << i)) {
+                    found[count] = i;
+                    count++;
+                }
+            if (count == 1)
+                cv_chosen[0] = found[0];
+            else
+                cv_chosen[0] = found[rnd() % count];
+            cv0 = p->cv_values[cv_chosen[0]];
         }
 
         // PARAM 1
         if ((rnd() % 255) < p->cv_probs[1][pos] && w.cv_mute[1]) {
-            if (p->cv_mode[1] == 0) { cv1 = p->cv_curves[1][pos]; }
-            else {
-                uint count = 0;
-                uint16_t found[16];
-                for (uint8_t i = 0; i < 16; i++)
-                    if (p->cv_steps[1][pos] & (1 << i)) {
-                        found[count] = i;
-                        count++;
-                    }
-                if (count == 1)
-                    cv_chosen[1] = found[0];
-                else
-                    cv_chosen[1] = found[rnd() % count];
+            uint count = 0;
+            uint16_t found[16];
+            for (uint8_t i = 0; i < 16; i++)
+                if (p->cv_steps[1][pos] & (1 << i)) {
+                    found[count] = i;
+                    count++;
+                }
+            if (count == 1)
+                cv_chosen[1] = found[0];
+            else
+                cv_chosen[1] = found[rnd() % count];
 
-                cv1 = p->cv_values[cv_chosen[1]];
-            }
+            cv1 = p->cv_values[cv_chosen[1]];
         }
 
 
@@ -647,20 +633,13 @@ static void handler_KeyTimer(int32_t data) {
                             w.wp[x].cv_values[n1] = w.wp[pattern].cv_values[n1];
                             w.wp[x].cv_steps[0][n1] =
                                 w.wp[pattern].cv_steps[0][n1];
-                            w.wp[x].cv_curves[0][n1] =
-                                w.wp[pattern].cv_curves[0][n1];
                             w.wp[x].cv_probs[0][n1] =
                                 w.wp[pattern].cv_probs[0][n1];
                             w.wp[x].cv_steps[1][n1] =
                                 w.wp[pattern].cv_steps[1][n1];
-                            w.wp[x].cv_curves[1][n1] =
-                                w.wp[pattern].cv_curves[1][n1];
                             w.wp[x].cv_probs[1][n1] =
                                 w.wp[pattern].cv_probs[1][n1];
                         }
-
-                        w.wp[x].cv_mode[0] = w.wp[pattern].cv_mode[0];
-                        w.wp[x].cv_mode[1] = w.wp[pattern].cv_mode[1];
 
                         w.wp[x].loop_start = w.wp[pattern].loop_start;
                         w.wp[x].loop_end = w.wp[pattern].loop_end;
@@ -843,10 +822,7 @@ static void handler_MonomeGridKey(int32_t data) {
         else if (y == 0) {
             if (x == kMaxLoopLength) {
                 key_alt = z;
-                if (z == 0) {
-                    param_accept = 0;
-                    live_in = 0;
-                }
+                if (z == 0) { param_accept = 0; }
                 monomeFrameDirty++;
             }
             else if (x < 4 && z) {
@@ -869,9 +845,7 @@ static void handler_MonomeGridKey(int32_t data) {
                 edit_cv_ch = (x - 4) / 4;
                 edit_prob = 0;
 
-                if (key_alt)
-                    p->cv_mode[edit_cv_ch] ^= 1;
-                else if (key_meta)
+                if (key_meta)
                     w.cv_mute[edit_cv_ch] ^= 1;
                 else
                     edit_mode = mCV;
@@ -942,229 +916,123 @@ static void handler_MonomeGridKey(int32_t data) {
             }
             // edit data
             else if (edit_prob == 0) {
-                // CURVES
-                if (p->cv_mode[edit_cv_ch] == 0) {
-                    if (y == 4 && z) {
-                        int16_t delta;
-                        if (center)
-                            delta = 3;
-                        else if (key_alt)
-                            delta = 409;
-                        else
-                            delta = 34;
+                if (scale_select && z) {
+                    // index -= 64;
+                    uint8_t index = (y - 4) * 8 + x;
+                    if (index < 24 && y < 8) {
+                        for (uint8_t i = 0; i < 16; i++)
+                            p->cv_values[i] = SCALES[index][i];
+                    }
 
-                        if (key_meta == 0) {
-                            // saturate
-                            if (p->cv_curves[edit_cv_ch][x] + delta < 4092)
-                                p->cv_curves[edit_cv_ch][x] += delta;
-                            else
-                                p->cv_curves[edit_cv_ch][x] = 4092;
-                        }
-                        else {
-                            for (uint8_t i = 0; i < 16; i++) {
-                                // saturate
-                                if (p->cv_curves[edit_cv_ch][i] + delta < 4092)
-                                    p->cv_curves[edit_cv_ch][i] += delta;
-                                else
-                                    p->cv_curves[edit_cv_ch][i] = 4092;
-                            }
-                        }
-                    }
-                    else if (y == 6 && z) {
-                        int16_t delta;
-                        if (center)
-                            delta = 3;
-                        else if (key_alt)
-                            delta = 409;
-                        else
-                            delta = 34;
-
-                        if (key_meta == 0) {
-                            // saturate
-                            if (p->cv_curves[edit_cv_ch][x] > delta)
-                                p->cv_curves[edit_cv_ch][x] -= delta;
-                            else
-                                p->cv_curves[edit_cv_ch][x] = 0;
-                        }
-                        else {
-                            for (uint8_t i = 0; i < 16; i++) {
-                                // saturate
-                                if (p->cv_curves[edit_cv_ch][i] > delta)
-                                    p->cv_curves[edit_cv_ch][i] -= delta;
-                                else
-                                    p->cv_curves[edit_cv_ch][i] = 0;
-                            }
-                        }
-                    }
-                    else if (y == 5) {
-                        if (z == 1) {
-                            center = 1;
-                            if (quantize_in)
-                                quantize_in = 0;
-                            else if (key_alt)
-                                p->cv_curves[edit_cv_ch][x] = clip;
-                            else
-                                clip = p->cv_curves[edit_cv_ch][x];
-                        }
-                        else
-                            center = 0;
-                    }
-                    else if (y == 7) {
-                        if (key_alt && z) {
-                            param_dest = &p->cv_curves[edit_cv_ch][pos];
-                            p->cv_curves[edit_cv_ch][pos] = (adc[1] / 34) * 34;
-                            quantize_in = 1;
-                            param_accept = 1;
-                            live_in = 1;
-                        }
-                        else if (center && z) {
-                            if (key_meta == 0)
-                                p->cv_curves[edit_cv_ch][x] =
-                                    rand() % ((adc[1] / 34) * 34 + 1);
-                            else {
-                                for (uint8_t i = 0; i < 16; i++) {
-                                    p->cv_curves[edit_cv_ch][i] =
-                                        rand() % ((adc[1] / 34) * 34 + 1);
-                                }
-                            }
-                        }
-                        else {
-                            param_accept = z;
-                            param_dest = &p->cv_curves[edit_cv_ch][x];
-                            if (z) {
-                                p->cv_curves[edit_cv_ch][x] =
-                                    (adc[1] / 34) * 34;
-                                quantize_in = 1;
-                            }
-                            else
-                                quantize_in = 0;
-                        }
-                        monomeFrameDirty++;
-                    }
+                    scale_select = 0;
+                    monomeFrameDirty++;
                 }
-                // MAP
                 else {
-                    if (scale_select && z) {
-                        // index -= 64;
-                        uint8_t index = (y - 4) * 8 + x;
-                        if (index < 24 && y < 8) {
-                            for (uint8_t i = 0; i < 16; i++)
-                                p->cv_values[i] = SCALES[index][i];
-                        }
+                    if (z && y == 4) {
+                        edit_cv_step = x;
+                        uint8_t count = 0;
+                        for (uint8_t i = 0; i < 16; i++)
+                            if ((p->cv_steps[edit_cv_ch][edit_cv_step] >> i) &
+                                1) {
+                                count++;
+                                edit_cv_value = i;
+                            }
+                        if (count > 1) edit_cv_value = -1;
 
-                        scale_select = 0;
+                        keycount_cv = 0;
+
                         monomeFrameDirty++;
                     }
-                    else {
-                        if (z && y == 4) {
-                            edit_cv_step = x;
+                    // load scale
+                    else if (key_alt && y == 7 && x == 0 && z) {
+                        scale_select++;
+                        monomeFrameDirty++;
+                    }
+                    // read pot
+                    else if (y == 7 && key_alt && edit_cv_value != -1 &&
+                             x == kMaxLoopLength) {
+                        param_accept = z;
+                        param_dest = &(p->cv_values[edit_cv_value]);
+                    }
+                    else if ((y == 5 || y == 6) && z && x < 4 &&
+                             edit_cv_step != -1) {
+                        int16_t delta = 0;
+                        if (x == 0)
+                            delta = 409;
+                        else if (x == 1)
+                            delta = 239;
+                        else if (x == 2)
+                            delta = 34;
+                        else if (x == 3)
+                            delta = 3;
+
+                        if (y == 6) delta *= -1;
+
+                        if (key_alt) {
+                            for (uint8_t i = 0; i < 16; i++) {
+                                if (p->cv_values[i] + delta > 4092)
+                                    p->cv_values[i] = 4092;
+                                else if (delta < 0 &&
+                                         p->cv_values[i] < -1 * delta)
+                                    p->cv_values[i] = 0;
+                                else
+                                    p->cv_values[i] += delta;
+                            }
+                        }
+                        else {
+                            if (p->cv_values[edit_cv_value] + delta > 4092)
+                                p->cv_values[edit_cv_value] = 4092;
+                            else if (delta < 0 &&
+                                     p->cv_values[edit_cv_value] < -1 * delta)
+                                p->cv_values[edit_cv_value] = 0;
+                            else
+                                p->cv_values[edit_cv_value] += delta;
+                        }
+
+                        monomeFrameDirty++;
+                    }
+                    // choose values
+                    else if (y == 7) {
+                        keycount_cv += z * 2 - 1;
+                        if (keycount_cv < 0) keycount_cv = 0;
+
+                        if (z) {
                             uint8_t count = 0;
                             for (uint8_t i = 0; i < 16; i++)
                                 if ((p->cv_steps[edit_cv_ch][edit_cv_step] >>
                                      i) &
-                                    1) {
+                                    1)
                                     count++;
-                                    edit_cv_value = i;
-                                }
-                            if (count > 1) edit_cv_value = -1;
 
-                            keycount_cv = 0;
-
-                            monomeFrameDirty++;
-                        }
-                        // load scale
-                        else if (key_alt && y == 7 && x == 0 && z) {
-                            scale_select++;
-                            monomeFrameDirty++;
-                        }
-                        // read pot
-                        else if (y == 7 && key_alt && edit_cv_value != -1 &&
-                                 x == kMaxLoopLength) {
-                            param_accept = z;
-                            param_dest = &(p->cv_values[edit_cv_value]);
-                        }
-                        else if ((y == 5 || y == 6) && z && x < 4 &&
-                                 edit_cv_step != -1) {
-                            int16_t delta = 0;
-                            if (x == 0)
-                                delta = 409;
-                            else if (x == 1)
-                                delta = 239;
-                            else if (x == 2)
-                                delta = 34;
-                            else if (x == 3)
-                                delta = 3;
-
-                            if (y == 6) delta *= -1;
-
-                            if (key_alt) {
-                                for (uint8_t i = 0; i < 16; i++) {
-                                    if (p->cv_values[i] + delta > 4092)
-                                        p->cv_values[i] = 4092;
-                                    else if (delta < 0 &&
-                                             p->cv_values[i] < -1 * delta)
-                                        p->cv_values[i] = 0;
-                                    else
-                                        p->cv_values[i] += delta;
-                                }
+                            // single press toggle
+                            if (keycount_cv == 1 && count < 2) {
+                                p->cv_steps[edit_cv_ch][edit_cv_step] =
+                                    (1 << x);
+                                edit_cv_value = x;
                             }
-                            else {
-                                if (p->cv_values[edit_cv_value] + delta > 4092)
-                                    p->cv_values[edit_cv_value] = 4092;
-                                else if (delta < 0 &&
-                                         p->cv_values[edit_cv_value] <
-                                             -1 * delta)
-                                    p->cv_values[edit_cv_value] = 0;
-                                else
-                                    p->cv_values[edit_cv_value] += delta;
-                            }
+                            // multiselect
+                            else if (keycount_cv > 1 || count > 1) {
+                                p->cv_steps[edit_cv_ch][edit_cv_step] ^=
+                                    (1 << x);
 
-                            monomeFrameDirty++;
-                        }
-                        // choose values
-                        else if (y == 7) {
-                            keycount_cv += z * 2 - 1;
-                            if (keycount_cv < 0) keycount_cv = 0;
+                                if (!p->cv_steps[edit_cv_ch][edit_cv_step])
+                                    p->cv_steps[edit_cv_ch][edit_cv_step] =
+                                        (1 << x);
 
-                            if (z) {
-                                uint8_t count = 0;
+                                count = 0;
                                 for (uint8_t i = 0; i < 16; i++)
                                     if ((p->cv_steps[edit_cv_ch]
                                                     [edit_cv_step] >>
                                          i) &
-                                        1)
+                                        1) {
                                         count++;
+                                        edit_cv_value = i;
+                                    }
 
-                                // single press toggle
-                                if (keycount_cv == 1 && count < 2) {
-                                    p->cv_steps[edit_cv_ch][edit_cv_step] =
-                                        (1 << x);
-                                    edit_cv_value = x;
-                                }
-                                // multiselect
-                                else if (keycount_cv > 1 || count > 1) {
-                                    p->cv_steps[edit_cv_ch][edit_cv_step] ^=
-                                        (1 << x);
-
-                                    if (!p->cv_steps[edit_cv_ch][edit_cv_step])
-                                        p->cv_steps[edit_cv_ch][edit_cv_step] =
-                                            (1 << x);
-
-                                    count = 0;
-                                    for (uint8_t i = 0; i < 16; i++)
-                                        if ((p->cv_steps[edit_cv_ch]
-                                                        [edit_cv_step] >>
-                                             i) &
-                                            1) {
-                                            count++;
-                                            edit_cv_value = i;
-                                        }
-
-                                    if (count > 1) edit_cv_value = -1;
-                                }
-
-                                monomeFrameDirty++;
+                                if (count > 1) edit_cv_value = -1;
                             }
+
+                            monomeFrameDirty++;
                         }
                     }
                 }
@@ -1365,8 +1233,7 @@ static void refresh() {
     // show map
     else if (edit_mode == mCV) {
         if (edit_prob == 0) {
-            // CURVES
-            if (p->cv_mode[edit_cv_ch] == 0) {
+            if (!scale_select) {
                 for (uint8_t i = 0; i < kGridWidth; i++) {
                     // probs
                     if (p->cv_probs[edit_cv_ch][i] == 255)
@@ -1374,84 +1241,55 @@ static void refresh() {
                     else if (p->cv_probs[edit_cv_ch][i] > 0)
                         monomeLedBuffer[48 + i] = 7;
 
-                    monomeLedBuffer[112 + i] =
-                        (p->cv_curves[edit_cv_ch][i] > 1023) * 7;
-                    monomeLedBuffer[96 + i] =
-                        (p->cv_curves[edit_cv_ch][i] > 2047) * 7;
-                    monomeLedBuffer[80 + i] =
-                        (p->cv_curves[edit_cv_ch][i] > 3071) * 7;
-                    monomeLedBuffer[64 + i] = 0;
-                    monomeLedBuffer
-                        [64 + 16 * (3 - (p->cv_curves[edit_cv_ch][i] >> 10)) +
-                         i] = (p->cv_curves[edit_cv_ch][i] >> 7) & 0x7;
-                }
+                    // clear edit select line
+                    monomeLedBuffer[64 + i] = 4;
 
-                // play step highlight
-                monomeLedBuffer[64 + pos] += 4;
-                monomeLedBuffer[80 + pos] += 4;
-                monomeLedBuffer[96 + pos] += 4;
-                monomeLedBuffer[112 + pos] += 4;
-            }
-            // MAP
-            else {
-                if (!scale_select) {
-                    for (uint8_t i = 0; i < kGridWidth; i++) {
-                        // probs
-                        if (p->cv_probs[edit_cv_ch][i] == 255)
-                            monomeLedBuffer[48 + i] = 11;
-                        else if (p->cv_probs[edit_cv_ch][i] > 0)
-                            monomeLedBuffer[48 + i] = 7;
-
-                        // clear edit select line
-                        monomeLedBuffer[64 + i] = 4;
-
-                        // show current edit value, selected
-                        if (edit_cv_value != -1) {
-                            if ((p->cv_values[edit_cv_value] >> 8) >= i)
-                                monomeLedBuffer[80 + i] = 7;
-                            else
-                                monomeLedBuffer[80 + i] = 0;
-
-                            if (((p->cv_values[edit_cv_value] >> 4) & 0xf) >= i)
-                                monomeLedBuffer[96 + i] = 4;
-                            else
-                                monomeLedBuffer[96 + i] = 0;
-                        }
-                        else {
-                            monomeLedBuffer[80 + i] = 0;
-                            monomeLedBuffer[96 + i] = 0;
-                        }
-
-                        // show steps
-                        if (p->cv_steps[edit_cv_ch][edit_cv_step] & (1 << i))
-                            monomeLedBuffer[112 + i] = 7;
+                    // show current edit value, selected
+                    if (edit_cv_value != -1) {
+                        if ((p->cv_values[edit_cv_value] >> 8) >= i)
+                            monomeLedBuffer[80 + i] = 7;
                         else
-                            monomeLedBuffer[112 + i] = 0;
+                            monomeLedBuffer[80 + i] = 0;
+
+                        if (((p->cv_values[edit_cv_value] >> 4) & 0xf) >= i)
+                            monomeLedBuffer[96 + i] = 4;
+                        else
+                            monomeLedBuffer[96 + i] = 0;
+                    }
+                    else {
+                        monomeLedBuffer[80 + i] = 0;
+                        monomeLedBuffer[96 + i] = 0;
                     }
 
-                    // show play position
-                    monomeLedBuffer[64 + pos] = 7;
-                    // show edit position
-                    monomeLedBuffer[64 + edit_cv_step] = 11;
-                    // show playing note
-                    monomeLedBuffer[112 + cv_chosen[edit_cv_ch]] = 11;
-                }
-                else {
-                    for (uint8_t i = 0; i < kGridWidth; i++) {
-                        // probs
-                        if (p->cv_probs[edit_cv_ch][i] == 255)
-                            monomeLedBuffer[48 + i] = 11;
-                        else if (p->cv_probs[edit_cv_ch][i] > 0)
-                            monomeLedBuffer[48 + i] = 7;
-
-                        monomeLedBuffer[64 + i] = (i < 8) * 4;
-                        monomeLedBuffer[80 + i] = (i < 8) * 4;
-                        monomeLedBuffer[96 + i] = (i < 8) * 4;
+                    // show steps
+                    if (p->cv_steps[edit_cv_ch][edit_cv_step] & (1 << i))
+                        monomeLedBuffer[112 + i] = 7;
+                    else
                         monomeLedBuffer[112 + i] = 0;
-                    }
-
-                    monomeLedBuffer[112] = 7;
                 }
+
+                // show play position
+                monomeLedBuffer[64 + pos] = 7;
+                // show edit position
+                monomeLedBuffer[64 + edit_cv_step] = 11;
+                // show playing note
+                monomeLedBuffer[112 + cv_chosen[edit_cv_ch]] = 11;
+            }
+            else {
+                for (uint8_t i = 0; i < kGridWidth; i++) {
+                    // probs
+                    if (p->cv_probs[edit_cv_ch][i] == 255)
+                        monomeLedBuffer[48 + i] = 11;
+                    else if (p->cv_probs[edit_cv_ch][i] > 0)
+                        monomeLedBuffer[48 + i] = 7;
+
+                    monomeLedBuffer[64 + i] = (i < 8) * 4;
+                    monomeLedBuffer[80 + i] = (i < 8) * 4;
+                    monomeLedBuffer[96 + i] = (i < 8) * 4;
+                    monomeLedBuffer[112 + i] = 0;
+                }
+
+                monomeLedBuffer[112] = 7;
             }
         }
         else if (edit_prob == 1) {
@@ -1716,10 +1554,6 @@ void flash_read(void) {
                 flashy.w[preset_select].wp[i1].cv_probs[0][i2];
             w.wp[i1].cv_probs[1][i2] =
                 flashy.w[preset_select].wp[i1].cv_probs[1][i2];
-            w.wp[i1].cv_curves[0][i2] =
-                flashy.w[preset_select].wp[i1].cv_curves[0][i2];
-            w.wp[i1].cv_curves[1][i2] =
-                flashy.w[preset_select].wp[i1].cv_curves[1][i2];
             w.wp[i1].cv_steps[0][i2] =
                 flashy.w[preset_select].wp[i1].cv_steps[0][i2];
             w.wp[i1].cv_steps[1][i2] =
@@ -1734,8 +1568,6 @@ void flash_read(void) {
         w.wp[i1].loop_start = flashy.w[preset_select].wp[i1].loop_start;
         w.wp[i1].loop_dir = flashy.w[preset_select].wp[i1].loop_dir;
         w.wp[i1].step_mode = flashy.w[preset_select].wp[i1].step_mode;
-        w.wp[i1].cv_mode[0] = flashy.w[preset_select].wp[i1].cv_mode[0];
-        w.wp[i1].cv_mode[1] = flashy.w[preset_select].wp[i1].cv_mode[1];
         w.wp[i1].tr_mode = flashy.w[preset_select].wp[i1].tr_mode;
     }
 
@@ -1804,8 +1636,6 @@ int main(void) {
                 w.wp[i].step_probs[j] = 255;
                 w.wp[i].cv_probs[0][j] = 255;
                 w.wp[i].cv_probs[1][j] = 255;
-                w.wp[i].cv_curves[0][j] = 0;
-                w.wp[i].cv_curves[1][j] = 0;
                 w.wp[i].cv_values[j] = SCALES[2][j];
                 w.wp[i].cv_steps[0][j] = 1 << j;
                 w.wp[i].cv_steps[1][j] = 1 << j;
@@ -1816,8 +1646,6 @@ int main(void) {
             w.wp[i].loop_start = 0;
             w.wp[i].loop_dir = 0;
             w.wp[i].step_mode = mForward;
-            w.wp[i].cv_mode[0] = 0;
-            w.wp[i].cv_mode[1] = 0;
             w.wp[i].tr_mode = mPulse;
         }
 
