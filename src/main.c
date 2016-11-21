@@ -175,7 +175,6 @@ uint16_t clock_time;
 uint16_t clock_temp;
 uint8_t series_step;
 
-uint16_t adc[4];
 
 const uint8_t kGridWidth = 16;
 const uint8_t kMaxLoopLength = 15;  // this value should be 16 and the code
@@ -582,26 +581,25 @@ static void handler_Front(int32_t data) {
 }
 
 static void handler_PollADC(int32_t data) {
-    uint16_t i;
+    uint16_t adc[4];
     adc_convert(&adc);
 
-    // CLOCK POT INPUT
-    i = adc[0];
-    i = i >> 2;
-    if (i != clock_temp) {
+    // Clock pot
+    uint16_t clock = adc[0] >> 2;
+    if (clock != clock_temp) {
         // 1000ms - 24ms
-        clock_time = 25000 / (i + 25);
+        clock_time = 25000 / (clock + 25);
 
         timer_set(&clockTimer, clock_time);
     }
-    clock_temp = i;
+    clock_temp = clock;
 
-    // PARAM POT INPUT
+    // Param pot
     if (key_meta) {
-        i = adc[1] >> 6;
-        if (i > 58) i = 58;
-        if (i != scroll_pos) {
-            scroll_pos = i;
+        uint16_t param = adc[1] >> 6;
+        if (param > 58) param = 58;
+        if (param != scroll_pos) {
+            scroll_pos = param;
             monomeFrameDirty++;
         }
     }
