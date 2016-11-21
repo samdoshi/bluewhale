@@ -99,7 +99,10 @@ typedef enum { mForward, mReverse, mDrunk, mRandom } step_mode_t;
 typedef enum { mPulse, mGate } tr_mode_t;
 
 typedef struct {
-    uint8_t loop_start, loop_end, loop_len, loop_dir;
+    uint8_t loop_start;
+    uint8_t loop_end;
+    uint8_t loop_len;
+    uint8_t loop_dir;
     uint16_t step_choice;
     tr_mode_t tr_mode;
     step_mode_t step_mode;
@@ -113,7 +116,8 @@ typedef struct {
 typedef struct {
     whale_pattern_t wp[16];
     uint16_t series_list[64];
-    uint8_t series_start, series_end;
+    uint8_t series_start;
+    uint8_t series_end;
     uint8_t tr_mute[4];
     uint8_t cv_mute[2];
 } whale_set_t;
@@ -132,29 +136,50 @@ uint8_t preset_mode, preset_select, front_timer;
 uint8_t glyph[8];
 
 edit_mode_t edit_mode;
-uint8_t edit_cv_step, edit_cv_ch;
+uint8_t edit_cv_step;
+uint8_t edit_cv_ch;
 int8_t edit_cv_value;
-uint8_t edit_prob, scale_select;
-uint8_t pattern, next_pattern, pattern_jump;
+uint8_t edit_prob;
+uint8_t scale_select;
+uint8_t pattern;
+uint8_t next_pattern;
+uint8_t pattern_jump;
 
-uint8_t series_pos, series_next, series_jump, series_playing, scroll_pos;
+uint8_t series_pos;
+uint8_t series_next;
+uint8_t series_jump;
+uint8_t series_playing;
+uint8_t scroll_pos;
 
-uint8_t key_alt, key_meta, center;
-uint8_t held_keys[32], key_count, key_times[256];
-uint8_t keyfirst_pos, keysecond_pos;
-int8_t keycount_pos, keycount_series, keycount_cv;
+uint8_t key_alt;
+uint8_t key_meta;
+uint8_t center;
+uint8_t held_keys[32];
+uint8_t key_count;
+uint8_t key_times[256];
+uint8_t keyfirst_pos;
+uint8_t keysecond_pos;
+int8_t keycount_pos;
+int8_t keycount_series;
+int8_t keycount_cv;
 
-int8_t pos, cut_pos, next_pos, drunk_step, triggered;
+int8_t pos;
+int8_t cut_pos;
+int8_t next_pos;
+int8_t drunk_step;
+int8_t triggered;
 uint8_t cv_chosen[2];
 uint16_t cv0, cv1;
 
-uint8_t param_accept, *param_dest8;
+uint8_t param_accept;
+uint8_t *param_dest8;
 uint16_t clip;
 uint16_t *param_dest;
 uint8_t quantize_in;
 
 uint8_t clock_phase;
-uint16_t clock_time, clock_temp;
+uint16_t clock_time;
+uint16_t clock_temp;
 uint8_t series_step;
 
 uint16_t adc[4];
