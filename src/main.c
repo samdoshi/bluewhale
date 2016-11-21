@@ -103,14 +103,14 @@ typedef struct {
     uint8_t loop_end;
     uint8_t loop_len;
     uint8_t loop_dir;
-    uint16_t step_choice;
-    tr_mode_t tr_mode;
-    step_mode_t step_mode;
-    uint8_t steps[16];
-    uint8_t step_probs[16];
-    uint16_t cv_values[16];
-    uint16_t cv_steps[2][16];
-    uint8_t cv_probs[2][16];
+    uint16_t step_choice;       // enabled steps - maybe bool step_choice[16]?
+    tr_mode_t tr_mode;          // pulse or gate
+    step_mode_t step_mode;      // forward / reverse / etc
+    uint8_t tr_steps[16];       //  the state of the 4 triggers for each step
+    uint8_t tr_step_probs[16];  // the probability of the a trigger for a step
+    uint16_t cv_values[16];  // the 16 defined CV values shared between A and B
+    uint16_t cv_steps[2][16];  // the selected value for each step of CV A and B
+    uint8_t cv_probs[2][16];   // the probability for each step of CV A and B
 } whale_pattern_t;
 
 typedef struct {
@@ -357,12 +357,12 @@ void clock(uint8_t phase) {
 
         // TRIGGER
         triggered = 0;
-        if ((rnd() % 255) < p->step_probs[pos]) {
+        if ((rnd() % 255) < p->tr_step_probs[pos]) {
             if (p->step_choice & 1 << pos) {
                 uint count = 0;
                 uint16_t found[16];
                 for (uint8_t i = 0; i < 4; i++)
-                    if (p->steps[pos] >> i & 1) {
+                    if (p->tr_steps[pos] >> i & 1) {
                         found[count] = i;
                         count++;
                     }
@@ -375,7 +375,7 @@ void clock(uint8_t phase) {
                     triggered = 1 << found[rnd() % count];
             }
             else {
-                triggered = p->steps[pos];
+                triggered = p->tr_steps[pos];
             }
 
             if (p->tr_mode == mGate) {
@@ -652,9 +652,9 @@ static void handler_KeyTimer(int32_t data) {
                     if (held_keys[i1] / 16 == 2) {
                         x = held_keys[i1] % 16;
                         for (n1 = 0; n1 < 16; n1++) {
-                            w.wp[x].steps[n1] = w.wp[pattern].steps[n1];
-                            w.wp[x].step_probs[n1] =
-                                w.wp[pattern].step_probs[n1];
+                            w.wp[x].tr_steps[n1] = w.wp[pattern].tr_steps[n1];
+                            w.wp[x].tr_step_probs[n1] =
+                                w.wp[pattern].tr_step_probs[n1];
                             w.wp[x].cv_values[n1] = w.wp[pattern].cv_values[n1];
                             w.wp[x].cv_steps[0][n1] =
                                 w.wp[pattern].cv_steps[0][n1];
@@ -890,12 +890,12 @@ static void handler_MonomeGridKey(int32_t data) {
         else if (edit_mode == mTrig) {
             if (z && y > 3 && edit_prob == 0) {
                 if (key_alt)
-                    p->steps[pos] |= 1 << (y - 4);
+                    p->tr_steps[pos] |= 1 << (y - 4);
                 else if (key_meta) {
                     p->step_choice ^= (1 << x);
                 }
                 else
-                    p->steps[x] ^= (1 << (y - 4));
+                    p->tr_steps[x] ^= (1 << (y - 4));
                 monomeFrameDirty++;
             }
             // step probs
@@ -903,23 +903,23 @@ static void handler_MonomeGridKey(int32_t data) {
                 if (key_alt)
                     edit_prob = 1;
                 else {
-                    if (p->step_probs[x] == 255)
-                        p->step_probs[x] = 0;
+                    if (p->tr_step_probs[x] == 255)
+                        p->tr_step_probs[x] = 0;
                     else
-                        p->step_probs[x] = 255;
+                        p->tr_step_probs[x] = 255;
                 }
                 monomeFrameDirty++;
             }
             else if (edit_prob == 1) {
                 if (z) {
                     if (y == 4)
-                        p->step_probs[x] = 192;
+                        p->tr_step_probs[x] = 192;
                     else if (y == 5)
-                        p->step_probs[x] = 128;
+                        p->tr_step_probs[x] = 128;
                     else if (y == 6)
-                        p->step_probs[x] = 64;
+                        p->tr_step_probs[x] = 64;
                     else
-                        p->step_probs[x] = 0;
+                        p->tr_step_probs[x] = 0;
                 }
             }
         }
@@ -1212,13 +1212,13 @@ static void refresh() {
         if (edit_prob == 0) {
             for (uint8_t i = 0; i < kGridWidth; i++) {
                 for (uint8_t j = 0; j < 4; j++) {
-                    if ((p->steps[i] & (1 << j)) && i == pos &&
+                    if ((p->tr_steps[i] & (1 << j)) && i == pos &&
                         (triggered & 1 << j) && w.tr_mute[j])
                         monomeLedBuffer[(j + 4) * 16 + i] = 11;
-                    else if (p->steps[i] & (1 << j) &&
+                    else if (p->tr_steps[i] & (1 << j) &&
                              (p->step_choice & 1 << i))
                         monomeLedBuffer[(j + 4) * 16 + i] = 4;
-                    else if (p->steps[i] & (1 << j))
+                    else if (p->tr_steps[i] & (1 << j))
                         monomeLedBuffer[(j + 4) * 16 + i] = 7;
                     else if (i == pos)
                         monomeLedBuffer[(j + 4) * 16 + i] = 4;
@@ -1227,9 +1227,9 @@ static void refresh() {
                 }
 
                 // probs
-                if (p->step_probs[i] == 255)
+                if (p->tr_step_probs[i] == 255)
                     monomeLedBuffer[48 + i] = 11;
-                else if (p->step_probs[i] > 0)
+                else if (p->tr_step_probs[i] > 0)
                     monomeLedBuffer[48 + i] = 4;
             }
         }
@@ -1240,15 +1240,15 @@ static void refresh() {
                 monomeLedBuffer[96 + i] = 4;
                 monomeLedBuffer[112 + i] = 4;
 
-                if (p->step_probs[i] == 255)
+                if (p->tr_step_probs[i] == 255)
                     monomeLedBuffer[48 + i] = 11;
-                else if (p->step_probs[i] == 0) {
+                else if (p->tr_step_probs[i] == 0) {
                     monomeLedBuffer[48 + i] = 0;
                     monomeLedBuffer[112 + i] = 7;
                 }
-                else if (p->step_probs[i]) {
+                else if (p->tr_step_probs[i]) {
                     monomeLedBuffer[48 + i] = 4;
-                    monomeLedBuffer[64 + 16 * (3 - (p->step_probs[i] >> 6)) +
+                    monomeLedBuffer[64 + 16 * (3 - (p->tr_step_probs[i] >> 6)) +
                                     i] = 7;
                 }
             }
@@ -1572,9 +1572,9 @@ void flash_read(void) {
 
     for (i1 = 0; i1 < 16; i1++) {
         for (i2 = 0; i2 < 16; i2++) {
-            w.wp[i1].steps[i2] = flashy.w[preset_select].wp[i1].steps[i2];
-            w.wp[i1].step_probs[i2] =
-                flashy.w[preset_select].wp[i1].step_probs[i2];
+            w.wp[i1].tr_steps[i2] = flashy.w[preset_select].wp[i1].tr_steps[i2];
+            w.wp[i1].tr_step_probs[i2] =
+                flashy.w[preset_select].wp[i1].tr_step_probs[i2];
             w.wp[i1].cv_probs[0][i2] =
                 flashy.w[preset_select].wp[i1].cv_probs[0][i2];
             w.wp[i1].cv_probs[1][i2] =
@@ -1657,8 +1657,8 @@ int main(void) {
         // clear out some reasonable defaults
         for (uint8_t i = 0; i < 16; i++) {
             for (uint8_t j = 0; j < 16; j++) {
-                w.wp[i].steps[j] = 0;
-                w.wp[i].step_probs[j] = 255;
+                w.wp[i].tr_steps[j] = 0;
+                w.wp[i].tr_step_probs[j] = 255;
                 w.wp[i].cv_probs[0][j] = 255;
                 w.wp[i].cv_probs[1][j] = 255;
                 w.wp[i].cv_values[j] = SCALES[2][j];
