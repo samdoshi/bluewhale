@@ -153,7 +153,6 @@ uint8_t scroll_pos;
 
 uint8_t key_alt;
 uint8_t key_meta;
-uint8_t center;
 uint8_t held_keys[32];
 uint8_t key_count;
 uint8_t key_times[256];
