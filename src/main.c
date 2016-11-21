@@ -171,12 +171,6 @@ int8_t triggered;
 uint8_t cv_chosen[2];
 uint16_t cv0, cv1;
 
-uint8_t param_accept;
-uint8_t *param_dest8;
-uint16_t clip;
-uint16_t *param_dest;
-uint8_t quantize_in;
-
 uint8_t clock_phase;
 uint16_t clock_time;
 uint16_t clock_temp;
@@ -604,17 +598,7 @@ static void handler_PollADC(int32_t data) {
     clock_temp = i;
 
     // PARAM POT INPUT
-    if (param_accept && edit_prob) {
-        *param_dest8 = adc[1] >> 4;  // scale to 0-255;
-    }
-    else if (param_accept) {
-        if (quantize_in)
-            *param_dest = (adc[1] / 34) * 34;
-        else
-            *param_dest = adc[1];
-        monomeFrameDirty++;
-    }
-    else if (key_meta) {
+    if (key_meta) {
         i = adc[1] >> 6;
         if (i > 58) i = 58;
         if (i != scroll_pos) {
@@ -847,7 +831,6 @@ static void handler_MonomeGridKey(int32_t data) {
         else if (y == 0) {
             if (x == kMaxLoopLength) {
                 key_alt = z;
-                if (z == 0) { param_accept = 0; }
                 monomeFrameDirty++;
             }
             else if (x < 4 && z) {
@@ -862,11 +845,9 @@ static void handler_MonomeGridKey(int32_t data) {
                 else
                     edit_mode = mTrig;
                 edit_prob = 0;
-                param_accept = 0;
                 monomeFrameDirty++;
             }
             else if (x > 3 && x < 12 && z) {
-                param_accept = 0;
                 edit_cv_ch = (x - 4) / 4;
                 edit_prob = 0;
 
@@ -972,12 +953,6 @@ static void handler_MonomeGridKey(int32_t data) {
                     else if (key_alt && y == 7 && x == 0 && z) {
                         scale_select++;
                         monomeFrameDirty++;
-                    }
-                    // read pot
-                    else if (y == 7 && key_alt && edit_cv_value != -1 &&
-                             x == kMaxLoopLength) {
-                        param_accept = z;
-                        param_dest = &(p->cv_values[edit_cv_value]);
                     }
                     else if ((y == 5 || y == 6) && z && x < 4 &&
                              edit_cv_step != -1) {
