@@ -149,7 +149,7 @@ uint8_t series_pos;
 uint8_t series_next;
 uint8_t series_jump;
 uint8_t series_playing;
-uint8_t scroll_pos;
+uint8_t series_scroll_pos;
 
 uint8_t key_alt;
 uint8_t key_meta;
@@ -598,8 +598,8 @@ static void handler_PollADC(int32_t data) {
     if (key_meta) {
         uint16_t param = adc[1] >> 6;
         if (param > 58) param = 58;
-        if (param != scroll_pos) {
-            scroll_pos = param;
+        if (param != series_scroll_pos) {
+            series_scroll_pos = param;
             monomeFrameDirty++;
         }
     }
@@ -1052,11 +1052,11 @@ static void handler_MonomeGridKey(int32_t data) {
         else if (edit_mode == mSeries) {
             if (z && key_alt) {
                 if (x == 0)
-                    series_next = y - 2 + scroll_pos;
+                    series_next = y - 2 + series_scroll_pos;
                 else if (x == kMaxLoopLength - 1)
-                    w.series_start = y - 2 + scroll_pos;
+                    w.series_start = y - 2 + series_scroll_pos;
                 else if (x == kMaxLoopLength)
-                    w.series_end = y - 2 + scroll_pos;
+                    w.series_end = y - 2 + series_scroll_pos;
 
                 if (w.series_end < w.series_start)
                     w.series_end = w.series_start;
@@ -1068,19 +1068,20 @@ static void handler_MonomeGridKey(int32_t data) {
                 if (z) {
                     uint8_t count = 0;
                     for (uint8_t i = 0; i < 16; i++)
-                        count += (w.series_list[y - 2 + scroll_pos] >> i) & 1;
+                        count +=
+                            (w.series_list[y - 2 + series_scroll_pos] >> i) & 1;
 
                     // single press toggle
                     if (keycount_series == 1 && count < 2) {
-                        w.series_list[y - 2 + scroll_pos] = (1 << x);
+                        w.series_list[y - 2 + series_scroll_pos] = (1 << x);
                     }
                     // multi-select
                     else if (keycount_series > 1 || count > 1) {
-                        w.series_list[y - 2 + scroll_pos] ^= (1 << x);
+                        w.series_list[y - 2 + series_scroll_pos] ^= (1 << x);
 
                         // ensure not fully clear
-                        if (!w.series_list[y - 2 + scroll_pos])
-                            w.series_list[y - 2 + scroll_pos] = (1 << x);
+                        if (!w.series_list[y - 2 + series_scroll_pos])
+                            w.series_list[y - 2 + series_scroll_pos] = (1 << x);
                     }
                 }
             }
@@ -1318,8 +1319,8 @@ static void refresh() {
         for (uint8_t i = 0; i < 6; i++) {
             for (uint8_t j = 0; j < kGridWidth; j++) {
                 // start/end bars, clear
-                if (i + scroll_pos == w.series_start ||
-                    i + scroll_pos == w.series_end)
+                if (i + series_scroll_pos == w.series_start ||
+                    i + series_scroll_pos == w.series_end)
                     monomeLedBuffer[32 + i * 16 + j] = 4;
                 else
                     monomeLedBuffer[32 + i * 16 + j] = 0;
@@ -1327,25 +1328,26 @@ static void refresh() {
 
             // scroll position helper
             monomeLedBuffer[32 + i * 16 +
-                            ((scroll_pos + i) / (64 / kGridWidth))] = 4;
+                            ((series_scroll_pos + i) / (64 / kGridWidth))] = 4;
 
             // sidebar selection indicators
-            if (i + scroll_pos > w.series_start &&
-                i + scroll_pos < w.series_end) {
+            if (i + series_scroll_pos > w.series_start &&
+                i + series_scroll_pos < w.series_end) {
                 monomeLedBuffer[32 + i * 16] = 4;
                 monomeLedBuffer[32 + i * 16 + kMaxLoopLength] = 4;
             }
 
             for (uint8_t j = 0; j < kGridWidth; j++) {
                 // show possible states
-                if ((w.series_list[i + scroll_pos] >> j) & 1)
+                if ((w.series_list[i + series_scroll_pos] >> j) & 1)
                     monomeLedBuffer[32 + (i * 16) + j] = 7;
             }
         }
 
         // highlight playhead
-        if (series_pos >= scroll_pos && series_pos < scroll_pos + 6) {
-            monomeLedBuffer[32 + (series_pos - scroll_pos) * 16 +
+        if (series_pos >= series_scroll_pos &&
+            series_pos < series_scroll_pos + 6) {
+            monomeLedBuffer[32 + (series_pos - series_scroll_pos) * 16 +
                             series_playing] = 11;
         }
     }
