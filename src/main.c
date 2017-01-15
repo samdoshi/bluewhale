@@ -1,9 +1,3 @@
-/* issues
-
-- preset save blip with internal timer vs ext trig
-
-*/
-
 #include <stdio.h>
 
 // asf
@@ -18,11 +12,13 @@
 #include "spi.h"
 #include "sysclk.h"
 
-// skeleton
+// libavr32
 #include "adc.h"
+#include "conf_board.h"
 #include "events.h"
 #include "ftdi.h"
 #include "i2c.h"
+#include "ii.h"
 #include "init_common.h"
 #include "init_trilogy.h"
 #include "monome.h"
@@ -30,16 +26,13 @@
 #include "types.h"
 #include "util.h"
 
-// this
-#include "conf_board.h"
-#include "ii.h"
-
+// bluewhale
+#include "helpers.h"
 
 #define FIRSTRUN_KEY 0x22
 
 
 const uint16_t SCALES[24][16] = {
-
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },  // ZERO
     { 0, 68, 136, 170, 238, 306, 375, 409, 477, 545, 579, 647, 715, 784, 818,
       886 },  // ionian [2, 2, 1, 2, 2, 2, 1]
@@ -132,7 +125,9 @@ typedef const struct {
 
 whale_set_t w;
 
-uint8_t preset_mode, preset_select, front_timer;
+uint8_t preset_mode;
+uint8_t preset_select;
+uint8_t front_timer;
 uint8_t glyph[8];
 
 edit_mode_t edit_mode;
@@ -193,17 +188,13 @@ static void refresh_preset(void);
 static void clock(uint8_t phase);
 
 // start/stop monome polling/refresh timers
-extern void timers_set_monome(void);
-extern void timers_unset_monome(void);
+static void timers_set_monome(void);
+static void timers_unset_monome(void);
 
 // check the event queue
 static void check_events(void);
 
 // handler protos
-static void handler_None(int32_t data) {
-    ;
-    ;
-}
 static void handler_KeyTimer(int32_t data);
 static void handler_Front(int32_t data);
 static void handler_ClockNormal(int32_t data);
@@ -211,15 +202,11 @@ static void handler_ClockExt(int32_t data);
 
 static void ww_process_ii(uint8_t *data, uint8_t l);
 
-uint8_t flash_is_fresh(void);
-void flash_unfresh(void);
-void flash_write(void);
-void flash_read(void);
+static uint8_t flash_is_fresh(void);
+static void flash_unfresh(void);
+static void flash_write(void);
+static void flash_read(void);
 
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 // application clock code
 
@@ -477,7 +464,7 @@ static softTimer_t monomePollTimer = {.next = NULL, .prev = NULL };
 static softTimer_t monomeRefreshTimer = {.next = NULL, .prev = NULL };
 
 
-static void clockTimer_callback(void *o) {
+static void clockTimer_callback(void *NOTUSED(obj)) {
     if (clock_external == 0) {
         clock_phase++;
         if (clock_phase > 1) clock_phase = 0;
@@ -485,14 +472,14 @@ static void clockTimer_callback(void *o) {
     }
 }
 
-static void keyTimer_callback(void *o) {
+static void keyTimer_callback(void *NOTUSED(obj)) {
     static event_t e;
     e.type = kEventKeyTimer;
     e.data = 0;
     event_post(&e);
 }
 
-static void adcTimer_callback(void *o) {
+static void adcTimer_callback(void *NOTUSED(obj)) {
     static event_t e;
     e.type = kEventPollADC;
     e.data = 0;
@@ -501,14 +488,14 @@ static void adcTimer_callback(void *o) {
 
 
 // monome polling callback
-static void monome_poll_timer_callback(void *obj) {
+static void monome_poll_timer_callback(void *NOTUSED(obj)) {
     // asynchronous, non-blocking read
     // UHC callback spawns appropriate events
     ftdi_read();
 }
 
 // monome refresh callback
-static void monome_refresh_timer_callback(void *obj) {
+static void monome_refresh_timer_callback(void *NOTUSED(obj)) {
     if (monomeFrameDirty > 0) {
         static event_t e;
         e.type = kEventMonomeRefresh;
@@ -517,7 +504,7 @@ static void monome_refresh_timer_callback(void *obj) {
 }
 
 // monome: start polling
-void timers_set_monome(void) {
+void timers_set_monome() {
     // print_dbg("\r\n setting monome timers");
     timer_add(&monomePollTimer, 20, &monome_poll_timer_callback, NULL);
     timer_add(&monomeRefreshTimer, 30, &monome_refresh_timer_callback, NULL);
@@ -534,24 +521,26 @@ void timers_unset_monome(void) {
 ////////////////////////////////////////////////////////////////////////////////
 // event handlers
 
-static void handler_FtdiConnect(int32_t data) {
+static void handler_FtdiConnect(int32_t NOTUSED(data)) {
     ftdi_setup();
 }
-static void handler_FtdiDisconnect(int32_t data) {
+static void handler_FtdiDisconnect(int32_t NOTUSED(data)) {
     timers_unset_monome();
 }
 
-static void handler_MonomeConnect(int32_t data) {
+static void handler_MonomeConnect(int32_t NOTUSED(data)) {
     keycount_pos = 0;
     key_count = 0;
 
     timers_set_monome();
 }
 
-static void handler_MonomePoll(int32_t data) {
+static void handler_MonomeDisconnect(int32_t NOTUSED(data)) {}
+
+static void handler_MonomePoll(int32_t NOTUSED(data)) {
     monome_read_serial();
 }
-static void handler_MonomeRefresh(int32_t data) {
+static void handler_MonomeRefresh(int32_t NOTUSED(data)) {
     if (monomeFrameDirty) {
         if (preset_mode == 0)
             refresh();
@@ -580,7 +569,7 @@ static void handler_Front(int32_t data) {
     monomeFrameDirty++;
 }
 
-static void handler_PollADC(int32_t data) {
+static void handler_PollADC(int32_t NOTUSED(data)) {
     uint16_t adc[4];
     adc_convert(&adc);
 
@@ -605,11 +594,11 @@ static void handler_PollADC(int32_t data) {
     }
 }
 
-static void handler_SaveFlash(int32_t data) {
+static void handler_SaveFlash(int32_t NOTUSED(data)) {
     flash_write();
 }
 
-static void handler_KeyTimer(int32_t data) {
+static void handler_KeyTimer(int32_t NOTUSED(data)) {
     static uint16_t i1, x, n1;
 
     if (front_timer) {
@@ -674,7 +663,7 @@ static void handler_KeyTimer(int32_t data) {
     }
 }
 
-static void handler_ClockNormal(int32_t data) {
+static void handler_ClockNormal(int32_t NOTUSED(data)) {
     clock_external = !gpio_get_pin_value(B09);
 }
 
@@ -683,9 +672,6 @@ static void handler_ClockExt(int32_t data) {
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 // application grid code
 
@@ -1373,7 +1359,7 @@ static void refresh_preset() {
 }
 
 
-static void ww_process_ii(uint8_t *data, uint8_t l) {
+static void ww_process_ii(uint8_t *data, uint8_t NOTUSED(l)) {
     uint8_t i;
     int d;
 
@@ -1508,7 +1494,7 @@ static inline void assign_main_event_handlers(void) {
     app_event_handlers[kEventFtdiConnect] = &handler_FtdiConnect;
     app_event_handlers[kEventFtdiDisconnect] = &handler_FtdiDisconnect;
     app_event_handlers[kEventMonomeConnect] = &handler_MonomeConnect;
-    app_event_handlers[kEventMonomeDisconnect] = &handler_None;
+    app_event_handlers[kEventMonomeDisconnect] = &handler_MonomeDisconnect;
     app_event_handlers[kEventMonomePoll] = &handler_MonomePoll;
     app_event_handlers[kEventMonomeRefresh] = &handler_MonomeRefresh;
     app_event_handlers[kEventMonomeGridKey] = &handler_MonomeGridKey;
