@@ -62,22 +62,22 @@ TARGET = $(THIS).elf
 
 # List of C source files.
 CSRCS = \
-       ../src/main.c    \
-       ../libavr32/src/adc.c     \
-       ../libavr32/src/events.c     \
-       ../libavr32/src/i2c.c     \
-       ../libavr32/src/init_trilogy.c \
-       ../libavr32/src/init_common.c \
-       ../libavr32/src/monome.c \
-       ../libavr32/src/timers.c \
-       ../libavr32/src/usb.c \
-       ../libavr32/src/util.c \
-       ../libavr32/src/usb/ftdi/ftdi.c \
-       ../libavr32/src/usb/ftdi/uhi_ftdi.c \
-       ../libavr32/src/usb/hid/hid.c \
-       ../libavr32/src/usb/hid/uhi_hid.c \
-       ../libavr32/src/usb/midi/uhi_midi.c \
-       ../libavr32/src/usb/midi/midi.c \
+       ../src/main.c                                      \
+       ../libavr32/src/adc.c                              \
+       ../libavr32/src/events.c                           \
+       ../libavr32/src/i2c.c                              \
+       ../libavr32/src/init_trilogy.c                     \
+       ../libavr32/src/init_common.c                      \
+       ../libavr32/src/monome.c                           \
+       ../libavr32/src/timers.c                           \
+       ../libavr32/src/usb.c                              \
+       ../libavr32/src/util.c                             \
+       ../libavr32/src/usb/ftdi/ftdi.c                    \
+       ../libavr32/src/usb/ftdi/uhi_ftdi.c                \
+       ../libavr32/src/usb/hid/hid.c                      \
+       ../libavr32/src/usb/hid/uhi_hid.c                  \
+       ../libavr32/src/usb/midi/uhi_midi.c                \
+       ../libavr32/src/usb/midi/midi.c                    \
        avr32/drivers/adc/adc.c                            \
        avr32/drivers/flashc/flashc.c                      \
        avr32/drivers/gpio/gpio.c                          \
@@ -87,32 +87,31 @@ CSRCS = \
        avr32/drivers/pm/power_clocks_lib.c                \
        avr32/drivers/spi/spi.c                            \
        avr32/drivers/tc/tc.c                              \
-       avr32/drivers/twi/twi.c                              \
+       avr32/drivers/twi/twi.c                            \
        avr32/drivers/usart/usart.c                        \
        avr32/drivers/usbb/usbb_host.c                     \
        avr32/utils/debug/print_funcs.c                    \
        common/services/usb/class/msc/host/uhi_msc.c       \
        common/services/usb/class/msc/host/uhi_msc_mem.c   \
-       common/services/spi/uc3_spi/spi_master.c \
-       common/services/usb/uhc/uhc.c \
-       common/services/clock/uc3b0_b1/sysclk.c  
+       common/services/spi/uc3_spi/spi_master.c           \
+       common/services/usb/uhc/uhc.c                      \
+       common/services/clock/uc3b0_b1/sysclk.c
 
 # List of assembler source files.
 ASSRCS = \
        avr32/utils/startup/trampoline_uc3.S               \
        avr32/drivers/intc/exception.S                     \
-              
 
 # List of include paths.
 INC_PATH = \
-       ../../src           \
-       ../src                                        \
-       ../src/usb \
-       ../src/usb/ftdi \
-       ../src/usb/hid \
-       ../src/usb/midi \
-       ../conf      \
-       ../conf/trilogy \
+       ../../src                                          \
+       ../src                                             \
+       ../src/usb                                         \
+       ../src/usb/ftdi                                    \
+       ../src/usb/hid                                     \
+       ../src/usb/midi                                    \
+       ../conf                                            \
+       ../conf/trilogy                                    \
        avr32/boards                                       \
        avr32/drivers/cpu/cycle_counter                    \
        avr32/drivers/flashc                               \
@@ -128,46 +127,45 @@ INC_PATH = \
        avr32/utils/debug                                  \
        avr32/utils/preprocessor                           \
        common/boards                                      \
-       common/boards/user_board \
+       common/boards/user_board                           \
        common/services/storage/ctrl_access                \
        common/services/clock                              \
        common/services/delay                              \
-       common/services/usb/ \
-       common/services/usb/uhc \
+       common/services/usb/                               \
+       common/services/usb/uhc                            \
        common/services/usb/class/msc                      \
        common/services/usb/class/msc/host                 \
        common/services/usb/class/hid                      \
-       common/services/spi/uc3_spi \
-       common/utils                                       
+       common/services/spi/uc3_spi                        \
+       common/utils
+
 
 # Additional search paths for libraries.
-LIB_PATH = 
+LIB_PATH =
 
 # List of libraries to use during linking.
-LIBS = 
+LIBS =
 
 # Path relative to top level directory pointing to a linker script.
-# LINKER_SCRIPT = avr32/utils/linker_scripts/at32uc3b/0256/gcc/link_uc3b0256.lds
-# LINKER_SCRIPT = avr32/drivers/flashc/flash_example/at32uc3b0256_evk1101/link_uc3b0256.lds
 LINKER_SCRIPT = ../../libavr32/src/link_uc3b0256.lds
 
 
 # Additional options for debugging. By default the common Makefile.in will
 # add -g3.
-DBGFLAGS = 
+DBGFLAGS =
 
 # Application optimization used during compilation and linking:
 # -O0, -O1, -O2, -O3 or -Os
 OPTIMIZATION = -Os
 
 # Extra flags to use when archiving.
-ARFLAGS = 
+ARFLAGS =
 
 # Extra flags to use when assembling.
-ASFLAGS = 
+ASFLAGS =
 
 # Extra flags to use when compiling.
-CFLAGS = 
+CFLAGS =
 
 # Extra flags to use when preprocessing.
 #
@@ -178,13 +176,11 @@ CFLAGS =
 # The most relevant symbols to define for the preprocessor are:
 #   BOARD      Target board in use, see boards/board.h for a list.
 #   EXT_BOARD  Optional extension board in use, see boards/board.h for a list.
-CPPFLAGS = \
-      -D BOARD=USER_BOARD -D UHD_ENABLE                             
+CPPFLAGS = -D BOARD=USER_BOARD -D UHD_ENABLE
 
 # Extra flags to use when linking
-LDFLAGS = \
-        -Wl,-e,_trampoline
+LDFLAGS = -Wl,-e,_trampoline
 
 # Pre- and post-build commands
-PREBUILD_CMD = 
-POSTBUILD_CMD = 
+PREBUILD_CMD =
+POSTBUILD_CMD =
