@@ -128,6 +128,7 @@ void timers_unset_monome(void) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // hardware
+
 void set_clock_output(bool value) {
     if (value)
         gpio_set_gpio_pin(B10);
@@ -143,6 +144,17 @@ void set_gate_output(uint8_t index, bool value) {
         gpio_clr_gpio_pin(gate_pins[index]);
 }
 
+void set_cv_output(uint8_t index, uint16_t value) {
+    const uint8_t dac_addresses[2] = {
+        0x31,  // A
+        0x38   // B
+    };
+    spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
+    spi_write(DAC_SPI, dac_addresses[index]);  // update A
+    spi_write(DAC_SPI, value >> 4);
+    spi_write(DAC_SPI, value << 4);
+    spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // event handlers

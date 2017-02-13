@@ -1,10 +1,5 @@
 #include "bluewhale.h"
 
-#include <stdio.h>
-
-#include "spi.h"
-
-#include "conf_board.h"
 #include "monome.h"
 #include "util.h"
 
@@ -329,7 +324,7 @@ void bw_clock_high() {
     triggered = 0;
     if ((rnd() % 255) < p->tr_step_probs[pos]) {
         if (p->step_choice & 1 << pos) {
-            uint count = 0;
+            uint8_t count = 0;
             uint16_t found[16];
             for (uint8_t i = 0; i < 4; i++)
                 if (p->tr_steps[pos] >> i & 1) {
@@ -367,7 +362,7 @@ void bw_clock_high() {
 
     // PARAM 0
     if ((rnd() % 255) < p->cv_probs[0][pos] && w.cv_mute[0]) {
-        uint count = 0;
+        uint8_t count = 0;
         uint16_t found[16];
         for (uint8_t i = 0; i < 16; i++)
             if (p->cv_steps[0][pos] & (1 << i)) {
@@ -383,7 +378,7 @@ void bw_clock_high() {
 
     // PARAM 1
     if ((rnd() % 255) < p->cv_probs[1][pos] && w.cv_mute[1]) {
-        uint count = 0;
+        uint8_t count = 0;
         uint16_t found[16];
         for (uint8_t i = 0; i < 16; i++)
             if (p->cv_steps[1][pos] & (1 << i)) {
@@ -400,17 +395,8 @@ void bw_clock_high() {
 
 
     // write to DAC
-    spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
-    spi_write(DAC_SPI, 0x31);  // update A
-    spi_write(DAC_SPI, cv0 >> 4);
-    spi_write(DAC_SPI, cv0 << 4);
-    spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
-
-    spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
-    spi_write(DAC_SPI, 0x38);  // update B
-    spi_write(DAC_SPI, cv1 >> 4);
-    spi_write(DAC_SPI, cv1 << 4);
-    spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
+    set_cv_output(0, cv0);
+    set_cv_output(1, cv1);
 }
 
 void bw_clock_low() {

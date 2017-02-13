@@ -21,5 +21,6 @@ extern void flash_read(void);
 
 extern void set_clock_output(bool value);
 extern void set_gate_output(uint8_t index, bool value);
+extern void set_cv_output(uint8_t index, uint16_t value);
 
 #endif
