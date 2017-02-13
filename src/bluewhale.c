@@ -194,246 +194,254 @@ void bw_key_timer() {
 ////////////////////////////////////////////////////////////////////////////////
 // application clock code
 
+void bw_clock_high(void);
+void bw_clock_low(void);
+
 void bw_clock(uint8_t phase) {
-    if (phase) {
-        gpio_set_gpio_pin(B10);
+    if (phase)
+        bw_clock_high();
+    else
+        bw_clock_low();
+}
 
+void bw_clock_high() {
+    gpio_set_gpio_pin(B10);
 
-        if (pattern_jump) {
-            pattern = next_pattern;
-            next_pos = w.wp[pattern].loop_start;
-            pattern_jump = 0;
-        }
-
-        // for series mode and delayed pattern change
-        if (series_jump) {
-            series_pos = series_next;
-            if (series_pos == w.series_end)
-                series_next = w.series_start;
-            else {
-                series_next++;
-                if (series_next > 63) series_next = w.series_start;
-            }
-
-            uint8_t count = 0;
-            uint16_t found[16];
-            for (uint8_t i = 0; i < 16; i++) {
-                if ((w.series_list[series_pos] >> i) & 1) {
-                    found[count] = i;
-                    count++;
-                }
-            }
-
-            if (count == 1)
-                next_pattern = found[0];
-            else {
-                next_pattern = found[rnd() % count];
-            }
-
-            pattern = next_pattern;
-            series_playing = pattern;
-            if (w.wp[pattern].step_mode == mReverse)
-                next_pos = w.wp[pattern].loop_end;
-            else
-                next_pos = w.wp[pattern].loop_start;
-
-            series_jump = 0;
-            series_step = 0;
-        }
-
-        pos = next_pos;
-
-        whale_pattern_t *p = &w.wp[pattern];
-
-        // calc next step
-        if (p->step_mode == mForward) {  // FORWARD
-            if (pos == p->loop_end)
-                next_pos = p->loop_start;
-            else if (pos >= kMaxLoopLength)
-                next_pos = 0;
-            else
-                next_pos++;
-            cut_pos = 0;
-        }
-        else if (p->step_mode == mReverse) {  // REVERSE
-            if (pos == p->loop_start)
-                next_pos = p->loop_end;
-            else if (pos <= 0)
-                next_pos = kMaxLoopLength;
-            else
-                next_pos--;
-            cut_pos = 0;
-        }
-        else if (p->step_mode == mDrunk) {  // DRUNK
-            drunk_step += (rnd() % 3) - 1;  // -1 to 1
-            if (drunk_step < -1)
-                drunk_step = -1;
-            else if (drunk_step > 1)
-                drunk_step = 1;
-
-            next_pos += drunk_step;
-            if (next_pos < 0)
-                next_pos = kMaxLoopLength;
-            else if (next_pos > kMaxLoopLength)
-                next_pos = 0;
-            else if (p->loop_dir == 1 && next_pos < p->loop_start)
-                next_pos = p->loop_end;
-            else if (p->loop_dir == 1 && next_pos > p->loop_end)
-                next_pos = p->loop_start;
-            else if (p->loop_dir == 2 && next_pos < p->loop_start &&
-                     next_pos > p->loop_end) {
-                if (drunk_step == 1)
-                    next_pos = p->loop_start;
-                else
-                    next_pos = p->loop_end;
-            }
-
-            cut_pos = 1;
-        }
-        else if (p->step_mode == mRandom) {  // RANDOM
-            next_pos = (rnd() % (p->loop_len + 1)) + p->loop_start;
-            // print_dbg("\r\nnext pos:");
-            // print_dbg_ulong(next_pos);
-            if (next_pos > kMaxLoopLength) next_pos -= kMaxLoopLength + 1;
-            cut_pos = 1;
-        }
-
-        // next pattern?
-        if (pos == p->loop_end && p->step_mode == mForward) {
-            if (edit_mode == mSeries)
-                series_jump++;
-            else if (next_pattern != pattern)
-                pattern_jump++;
-        }
-        else if (pos == p->loop_start && p->step_mode == mReverse) {
-            if (edit_mode == mSeries)
-                series_jump++;
-            else if (next_pattern != pattern)
-                pattern_jump++;
-        }
-        else if (series_step == p->loop_len) {
-            series_jump++;
-        }
-
-        if (edit_mode == mSeries) series_step++;
-
-
-        // TRIGGER
-        triggered = 0;
-        if ((rnd() % 255) < p->tr_step_probs[pos]) {
-            if (p->step_choice & 1 << pos) {
-                uint count = 0;
-                uint16_t found[16];
-                for (uint8_t i = 0; i < 4; i++)
-                    if (p->tr_steps[pos] >> i & 1) {
-                        found[count] = i;
-                        count++;
-                    }
-
-                if (count == 0)
-                    triggered = 0;
-                else if (count == 1)
-                    triggered = 1 << found[0];
-                else
-                    triggered = 1 << found[rnd() % count];
-            }
-            else {
-                triggered = p->tr_steps[pos];
-            }
-
-            if (p->tr_mode == mGate) {
-                if (triggered & 0x1 && w.tr_mute[0]) gpio_set_gpio_pin(B00);
-                if (triggered & 0x2 && w.tr_mute[1]) gpio_set_gpio_pin(B01);
-                if (triggered & 0x4 && w.tr_mute[2]) gpio_set_gpio_pin(B02);
-                if (triggered & 0x8 && w.tr_mute[3]) gpio_set_gpio_pin(B03);
-            }
-            else {  // tr_mode == mPulse
-                if (w.tr_mute[0]) {
-                    if (triggered & 0x1)
-                        gpio_set_gpio_pin(B00);
-                    else
-                        gpio_clr_gpio_pin(B00);
-                }
-                if (w.tr_mute[1]) {
-                    if (triggered & 0x2)
-                        gpio_set_gpio_pin(B01);
-                    else
-                        gpio_clr_gpio_pin(B01);
-                }
-                if (w.tr_mute[2]) {
-                    if (triggered & 0x4)
-                        gpio_set_gpio_pin(B02);
-                    else
-                        gpio_clr_gpio_pin(B02);
-                }
-                if (w.tr_mute[3]) {
-                    if (triggered & 0x8)
-                        gpio_set_gpio_pin(B03);
-                    else
-                        gpio_clr_gpio_pin(B03);
-                }
-            }
-        }
-
-        monomeFrameDirty++;
-
-
-        // PARAM 0
-        if ((rnd() % 255) < p->cv_probs[0][pos] && w.cv_mute[0]) {
-            uint count = 0;
-            uint16_t found[16];
-            for (uint8_t i = 0; i < 16; i++)
-                if (p->cv_steps[0][pos] & (1 << i)) {
-                    found[count] = i;
-                    count++;
-                }
-            if (count == 1)
-                cv_chosen[0] = found[0];
-            else
-                cv_chosen[0] = found[rnd() % count];
-            cv0 = p->cv_values[cv_chosen[0]];
-        }
-
-        // PARAM 1
-        if ((rnd() % 255) < p->cv_probs[1][pos] && w.cv_mute[1]) {
-            uint count = 0;
-            uint16_t found[16];
-            for (uint8_t i = 0; i < 16; i++)
-                if (p->cv_steps[1][pos] & (1 << i)) {
-                    found[count] = i;
-                    count++;
-                }
-            if (count == 1)
-                cv_chosen[1] = found[0];
-            else
-                cv_chosen[1] = found[rnd() % count];
-
-            cv1 = p->cv_values[cv_chosen[1]];
-        }
-
-
-        // write to DAC
-        spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
-        spi_write(DAC_SPI, 0x31);  // update A
-        spi_write(DAC_SPI, cv0 >> 4);
-        spi_write(DAC_SPI, cv0 << 4);
-        spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
-
-        spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
-        spi_write(DAC_SPI, 0x38);  // update B
-        spi_write(DAC_SPI, cv1 >> 4);
-        spi_write(DAC_SPI, cv1 << 4);
-        spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
+    if (pattern_jump) {
+        pattern = next_pattern;
+        next_pos = w.wp[pattern].loop_start;
+        pattern_jump = 0;
     }
-    else {
-        gpio_clr_gpio_pin(B10);
 
-        if (w.wp[pattern].tr_mode == mGate) {
-            gpio_clr_gpio_pin(B00);
-            gpio_clr_gpio_pin(B01);
-            gpio_clr_gpio_pin(B02);
-            gpio_clr_gpio_pin(B03);
+    // for series mode and delayed pattern change
+    if (series_jump) {
+        series_pos = series_next;
+        if (series_pos == w.series_end)
+            series_next = w.series_start;
+        else {
+            series_next++;
+            if (series_next > 63) series_next = w.series_start;
         }
+
+        uint8_t count = 0;
+        uint16_t found[16];
+        for (uint8_t i = 0; i < 16; i++) {
+            if ((w.series_list[series_pos] >> i) & 1) {
+                found[count] = i;
+                count++;
+            }
+        }
+
+        if (count == 1)
+            next_pattern = found[0];
+        else {
+            next_pattern = found[rnd() % count];
+        }
+
+        pattern = next_pattern;
+        series_playing = pattern;
+        if (w.wp[pattern].step_mode == mReverse)
+            next_pos = w.wp[pattern].loop_end;
+        else
+            next_pos = w.wp[pattern].loop_start;
+
+        series_jump = 0;
+        series_step = 0;
+    }
+
+    pos = next_pos;
+
+    whale_pattern_t *p = &w.wp[pattern];
+
+    // calc next step
+    if (p->step_mode == mForward) {  // FORWARD
+        if (pos == p->loop_end)
+            next_pos = p->loop_start;
+        else if (pos >= kMaxLoopLength)
+            next_pos = 0;
+        else
+            next_pos++;
+        cut_pos = 0;
+    }
+    else if (p->step_mode == mReverse) {  // REVERSE
+        if (pos == p->loop_start)
+            next_pos = p->loop_end;
+        else if (pos <= 0)
+            next_pos = kMaxLoopLength;
+        else
+            next_pos--;
+        cut_pos = 0;
+    }
+    else if (p->step_mode == mDrunk) {  // DRUNK
+        drunk_step += (rnd() % 3) - 1;  // -1 to 1
+        if (drunk_step < -1)
+            drunk_step = -1;
+        else if (drunk_step > 1)
+            drunk_step = 1;
+
+        next_pos += drunk_step;
+        if (next_pos < 0)
+            next_pos = kMaxLoopLength;
+        else if (next_pos > kMaxLoopLength)
+            next_pos = 0;
+        else if (p->loop_dir == 1 && next_pos < p->loop_start)
+            next_pos = p->loop_end;
+        else if (p->loop_dir == 1 && next_pos > p->loop_end)
+            next_pos = p->loop_start;
+        else if (p->loop_dir == 2 && next_pos < p->loop_start &&
+                 next_pos > p->loop_end) {
+            if (drunk_step == 1)
+                next_pos = p->loop_start;
+            else
+                next_pos = p->loop_end;
+        }
+
+        cut_pos = 1;
+    }
+    else if (p->step_mode == mRandom) {  // RANDOM
+        next_pos = (rnd() % (p->loop_len + 1)) + p->loop_start;
+        // print_dbg("\r\nnext pos:");
+        // print_dbg_ulong(next_pos);
+        if (next_pos > kMaxLoopLength) next_pos -= kMaxLoopLength + 1;
+        cut_pos = 1;
+    }
+
+    // next pattern?
+    if (pos == p->loop_end && p->step_mode == mForward) {
+        if (edit_mode == mSeries)
+            series_jump++;
+        else if (next_pattern != pattern)
+            pattern_jump++;
+    }
+    else if (pos == p->loop_start && p->step_mode == mReverse) {
+        if (edit_mode == mSeries)
+            series_jump++;
+        else if (next_pattern != pattern)
+            pattern_jump++;
+    }
+    else if (series_step == p->loop_len) {
+        series_jump++;
+    }
+
+    if (edit_mode == mSeries) series_step++;
+
+
+    // TRIGGER
+    triggered = 0;
+    if ((rnd() % 255) < p->tr_step_probs[pos]) {
+        if (p->step_choice & 1 << pos) {
+            uint count = 0;
+            uint16_t found[16];
+            for (uint8_t i = 0; i < 4; i++)
+                if (p->tr_steps[pos] >> i & 1) {
+                    found[count] = i;
+                    count++;
+                }
+
+            if (count == 0)
+                triggered = 0;
+            else if (count == 1)
+                triggered = 1 << found[0];
+            else
+                triggered = 1 << found[rnd() % count];
+        }
+        else {
+            triggered = p->tr_steps[pos];
+        }
+
+        if (p->tr_mode == mGate) {
+            if (triggered & 0x1 && w.tr_mute[0]) gpio_set_gpio_pin(B00);
+            if (triggered & 0x2 && w.tr_mute[1]) gpio_set_gpio_pin(B01);
+            if (triggered & 0x4 && w.tr_mute[2]) gpio_set_gpio_pin(B02);
+            if (triggered & 0x8 && w.tr_mute[3]) gpio_set_gpio_pin(B03);
+        }
+        else {  // tr_mode == mPulse
+            if (w.tr_mute[0]) {
+                if (triggered & 0x1)
+                    gpio_set_gpio_pin(B00);
+                else
+                    gpio_clr_gpio_pin(B00);
+            }
+            if (w.tr_mute[1]) {
+                if (triggered & 0x2)
+                    gpio_set_gpio_pin(B01);
+                else
+                    gpio_clr_gpio_pin(B01);
+            }
+            if (w.tr_mute[2]) {
+                if (triggered & 0x4)
+                    gpio_set_gpio_pin(B02);
+                else
+                    gpio_clr_gpio_pin(B02);
+            }
+            if (w.tr_mute[3]) {
+                if (triggered & 0x8)
+                    gpio_set_gpio_pin(B03);
+                else
+                    gpio_clr_gpio_pin(B03);
+            }
+        }
+    }
+
+    monomeFrameDirty++;
+
+
+    // PARAM 0
+    if ((rnd() % 255) < p->cv_probs[0][pos] && w.cv_mute[0]) {
+        uint count = 0;
+        uint16_t found[16];
+        for (uint8_t i = 0; i < 16; i++)
+            if (p->cv_steps[0][pos] & (1 << i)) {
+                found[count] = i;
+                count++;
+            }
+        if (count == 1)
+            cv_chosen[0] = found[0];
+        else
+            cv_chosen[0] = found[rnd() % count];
+        cv0 = p->cv_values[cv_chosen[0]];
+    }
+
+    // PARAM 1
+    if ((rnd() % 255) < p->cv_probs[1][pos] && w.cv_mute[1]) {
+        uint count = 0;
+        uint16_t found[16];
+        for (uint8_t i = 0; i < 16; i++)
+            if (p->cv_steps[1][pos] & (1 << i)) {
+                found[count] = i;
+                count++;
+            }
+        if (count == 1)
+            cv_chosen[1] = found[0];
+        else
+            cv_chosen[1] = found[rnd() % count];
+
+        cv1 = p->cv_values[cv_chosen[1]];
+    }
+
+
+    // write to DAC
+    spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
+    spi_write(DAC_SPI, 0x31);  // update A
+    spi_write(DAC_SPI, cv0 >> 4);
+    spi_write(DAC_SPI, cv0 << 4);
+    spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
+
+    spi_selectChip(DAC_SPI, DAC_SPI_NPCS);
+    spi_write(DAC_SPI, 0x38);  // update B
+    spi_write(DAC_SPI, cv1 >> 4);
+    spi_write(DAC_SPI, cv1 << 4);
+    spi_unselectChip(DAC_SPI, DAC_SPI_NPCS);
+}
+
+void bw_clock_low() {
+    gpio_clr_gpio_pin(B10);
+
+    if (w.wp[pattern].tr_mode == mGate) {
+        gpio_clr_gpio_pin(B00);
+        gpio_clr_gpio_pin(B01);
+        gpio_clr_gpio_pin(B02);
+        gpio_clr_gpio_pin(B03);
     }
 }
 
