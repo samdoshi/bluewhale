@@ -40,7 +40,8 @@ int8_t next_pos;
 int8_t drunk_step;
 int8_t triggered;
 uint8_t cv_chosen[2];
-uint16_t cv0, cv1;
+uint16_t cv0;
+uint16_t cv1;
 
 uint8_t series_step;
 
