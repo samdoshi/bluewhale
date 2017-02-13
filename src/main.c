@@ -61,7 +61,7 @@ static void handler_Front(int32_t data);
 static void handler_ClockNormal(int32_t data);
 static void handler_ClockExt(int32_t data);
 
-static void ww_process_ii(uint8_t *data, uint8_t l);
+static void bw_process_ii(uint8_t *data, uint8_t l);
 
 ////////////////////////////////////////////////////////////////////////////////
 // timers
@@ -234,127 +234,7 @@ static void refresh_preset() {
 }
 
 
-static void ww_process_ii(uint8_t *data, uint8_t NOTUSED(l)) {
-    /*uint8_t i;
-    int d;
-
-    i = data[0];
-    d = (data[1] << 8) + data[2];
-
-    switch (i) {
-        case WW_PRESET:
-            if (d < 0 || d > 7) break;
-            preset_select = d;
-            flash_read();
-            break;
-        case WW_POS:
-            if (d < 0 || d > 15) break;
-            next_pos = d;
-            cut_pos++;
-            monomeFrameDirty++;
-            break;
-        case WW_SYNC:
-            if (d < 0 || d > 15) break;
-            next_pos = d;
-            cut_pos++;
-            timer_set(&clockTimer, clock_time);
-            clock_phase = 1;
-            (*clock_pulse)(clock_phase);
-            break;
-        case WW_START:
-            if (d < 0 || d > 15) break;
-            w.wp[pattern].loop_start = d;
-            if (w.wp[pattern].loop_start > w.wp[pattern].loop_end)
-                w.wp[pattern].loop_dir = 2;
-            else if (w.wp[pattern].loop_start == 0 &&
-                     w.wp[pattern].loop_end == kMaxLoopLength)
-                w.wp[pattern].loop_dir = 0;
-            else
-                w.wp[pattern].loop_dir = 1;
-
-            w.wp[pattern].loop_len =
-                w.wp[pattern].loop_end - w.wp[pattern].loop_start;
-
-            if (w.wp[pattern].loop_dir == 2)
-                w.wp[pattern].loop_len =
-                    (kMaxLoopLength - w.wp[pattern].loop_start) +
-                    w.wp[pattern].loop_end + 1;
-            monomeFrameDirty++;
-            break;
-        case WW_END:
-            if (d < 0 || d > 15) break;
-            w.wp[pattern].loop_end = d;
-            if (w.wp[pattern].loop_start > w.wp[pattern].loop_end)
-                w.wp[pattern].loop_dir = 2;
-            else if (w.wp[pattern].loop_start == 0 &&
-                     w.wp[pattern].loop_end == kMaxLoopLength)
-                w.wp[pattern].loop_dir = 0;
-            else
-                w.wp[pattern].loop_dir = 1;
-
-            w.wp[pattern].loop_len =
-                w.wp[pattern].loop_end - w.wp[pattern].loop_start;
-
-            if (w.wp[pattern].loop_dir == 2)
-                w.wp[pattern].loop_len =
-                    (kMaxLoopLength - w.wp[pattern].loop_start) +
-                    w.wp[pattern].loop_end + 1;
-            monomeFrameDirty++;
-            break;
-        case WW_PMODE:
-            if (d < 0 || d > 3) break;
-            w.wp[pattern].step_mode = d;
-            break;
-        case WW_PATTERN:
-            if (d < 0 || d > 15) break;
-            pattern = d;
-            next_pattern = d;
-            monomeFrameDirty++;
-            break;
-        case WW_QPATTERN:
-            if (d < 0 || d > 15) break;
-            next_pattern = d;
-            monomeFrameDirty++;
-            break;
-        case WW_MUTE1:
-            if (d)
-                w.tr_mute[0] = 1;
-            else
-                w.tr_mute[0] = 0;
-            break;
-        case WW_MUTE2:
-            if (d)
-                w.tr_mute[1] = 1;
-            else
-                w.tr_mute[1] = 0;
-            break;
-        case WW_MUTE3:
-            if (d)
-                w.tr_mute[2] = 1;
-            else
-                w.tr_mute[2] = 0;
-            break;
-        case WW_MUTE4:
-            if (d)
-                w.tr_mute[3] = 1;
-            else
-                w.tr_mute[3] = 0;
-            break;
-        case WW_MUTEA:
-            if (d)
-                w.cv_mute[0] = 1;
-            else
-                w.cv_mute[0] = 0;
-            break;
-        case WW_MUTEB:
-            if (d)
-                w.cv_mute[1] = 1;
-            else
-                w.cv_mute[1] = 0;
-            break;
-        default: break;
-        }*/
-}
+static void bw_process_ii(uint8_t *NOTUSED(data), uint8_t NOTUSED(l)) {}
 
 
 // assign event handlers
@@ -538,7 +418,7 @@ int main(void) {
             glyph[i] = flashy.glyph[preset_select][i];
     }
 
-    process_ii = &ww_process_ii;
+    process_ii = &bw_process_ii;
 
     clock_pulse = &bw_clock;
     clock_external = !gpio_get_pin_value(B09);
