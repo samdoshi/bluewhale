@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "gpio.h"
 #include "spi.h"
 
 #include "conf_board.h"
@@ -205,7 +204,7 @@ void bw_clock(uint8_t phase) {
 }
 
 void bw_clock_high() {
-    gpio_set_gpio_pin(B10);
+    set_clock_output(true);
 
     if (pattern_jump) {
         pattern = next_pattern;
@@ -350,36 +349,16 @@ void bw_clock_high() {
         }
 
         if (p->tr_mode == mGate) {
-            if (triggered & 0x1 && w.tr_mute[0]) gpio_set_gpio_pin(B00);
-            if (triggered & 0x2 && w.tr_mute[1]) gpio_set_gpio_pin(B01);
-            if (triggered & 0x4 && w.tr_mute[2]) gpio_set_gpio_pin(B02);
-            if (triggered & 0x8 && w.tr_mute[3]) gpio_set_gpio_pin(B03);
+            if (triggered & 0x1 && w.tr_mute[0]) set_gate_output(0, true);
+            if (triggered & 0x2 && w.tr_mute[1]) set_gate_output(1, true);
+            if (triggered & 0x4 && w.tr_mute[2]) set_gate_output(2, true);
+            if (triggered & 0x8 && w.tr_mute[3]) set_gate_output(3, true);
         }
         else {  // tr_mode == mPulse
-            if (w.tr_mute[0]) {
-                if (triggered & 0x1)
-                    gpio_set_gpio_pin(B00);
-                else
-                    gpio_clr_gpio_pin(B00);
-            }
-            if (w.tr_mute[1]) {
-                if (triggered & 0x2)
-                    gpio_set_gpio_pin(B01);
-                else
-                    gpio_clr_gpio_pin(B01);
-            }
-            if (w.tr_mute[2]) {
-                if (triggered & 0x4)
-                    gpio_set_gpio_pin(B02);
-                else
-                    gpio_clr_gpio_pin(B02);
-            }
-            if (w.tr_mute[3]) {
-                if (triggered & 0x8)
-                    gpio_set_gpio_pin(B03);
-                else
-                    gpio_clr_gpio_pin(B03);
-            }
+            if (w.tr_mute[0]) { set_gate_output(0, triggered & 0x1); }
+            if (w.tr_mute[1]) { set_gate_output(1, triggered & 0x2); }
+            if (w.tr_mute[2]) { set_gate_output(2, triggered & 0x4); }
+            if (w.tr_mute[3]) { set_gate_output(3, triggered & 0x8); }
         }
     }
 
@@ -435,13 +414,13 @@ void bw_clock_high() {
 }
 
 void bw_clock_low() {
-    gpio_clr_gpio_pin(B10);
+    set_clock_output(false);
 
     if (w.wp[pattern].tr_mode == mGate) {
-        gpio_clr_gpio_pin(B00);
-        gpio_clr_gpio_pin(B01);
-        gpio_clr_gpio_pin(B02);
-        gpio_clr_gpio_pin(B03);
+        set_gate_output(0, false);
+        set_gate_output(1, false);
+        set_gate_output(2, false);
+        set_gate_output(3, false);
     }
 }
 

@@ -126,6 +126,23 @@ void timers_unset_monome(void) {
     timer_remove(&monomeRefreshTimer);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// hardware
+void set_clock_output(bool value) {
+    if (value)
+        gpio_set_gpio_pin(B10);
+    else
+        gpio_clr_gpio_pin(B10);
+}
+
+void set_gate_output(uint8_t index, bool value) {
+    const uint32_t gate_pins[4] = { B00, B01, B02, B03 };
+    if (value)
+        gpio_set_gpio_pin(gate_pins[index]);
+    else
+        gpio_clr_gpio_pin(gate_pins[index]);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // event handlers
