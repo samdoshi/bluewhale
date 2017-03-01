@@ -1,10 +1,16 @@
 #include "bluewhale.h"
 
 #include "monome.h"
-#include "util.h"
 
 #include "hardware.h"
 
+////////////////////////////////////////////////////////////////////////////////
+// prototypes
+uint32_t rnd(void);
+
+
+////////////////////////////////////////////////////////////////////////////////
+// global variables
 whale_set_t w;
 
 edit_mode_t edit_mode;
@@ -1078,4 +1084,20 @@ void bw_key_press(uint8_t x, uint8_t y, uint8_t z) {
             monomeFrameDirty++;
         }
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// helpers
+
+uint32_t rnd(void) {
+    static const uint32_t a1 = 0x19660d;
+    static const uint32_t c1 = 0x3c6ef35f;
+    static uint32_t x1 = 1234567;  // seed
+    static const uint32_t a2 = 0x19660d;
+    static const uint32_t c2 = 0x3c6ef35f;
+    static uint32_t x2 = 7654321;  // seed
+
+    x1 = x1 * c1 + a1;
+    x2 = x2 * c2 + a2;
+    return (x1>>16) | (x2>>16);
 }
