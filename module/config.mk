@@ -62,7 +62,7 @@ TARGET = $(THIS).elf
 
 # List of C source files.
 CSRCS = \
-       ../src/main.c                                      \
+       ../module/main.c                                   \
        ../src/bluewhale.c                                 \
        ../libavr32/src/adc.c                              \
        ../libavr32/src/events.c                           \
